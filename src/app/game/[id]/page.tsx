@@ -1,18 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useEffect, useState, Suspense } from 'react';
 import { getGameDetails } from '@/lib/api-client';
 import { getErrorMessage } from '@/lib/api-client';
 import { IGDBGame, getIGDBImageUrl, formatReleaseDate } from '@/lib/igdb';
 import Image from 'next/image';
 import { Heart, Bookmark, CheckCircle2, Star } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
-import { usePathname } from 'next/navigation';
 
-export default function GameDetailPage() {
-  const pathname = usePathname();
-  const gameId = pathname.split('/').pop();
+export default function GameDetailPage({
+  params,
+}: {
+  params: { id: string };
+}) {
   const [game, setGame] = useState<IGDBGame | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,8 +27,8 @@ export default function GameDetailPage() {
       try {
         setLoading(true);
         setError(null);
-        const id = parseInt(gameId || '0');
-        const data = await getGameDetails(id);
+        const gameId = parseInt(params.id);
+        const data = await getGameDetails(gameId);
         setGame(data);
       } catch (err) {
         setError(getErrorMessage(err));
@@ -87,21 +87,21 @@ export default function GameDetailPage() {
     );
   }
 
-  const gameId = game.id;
-  const isPlayed = hasInteraction(gameId, 'played');
-  const isWishlisted = hasInteraction(gameId, 'wishlist');
-  const isLiked = hasInteraction(gameId, 'liked');
+  const gameIdNum = game.id;
+  const isPlayed = hasInteraction(gameIdNum, 'played');
+  const isWishlisted = hasInteraction(gameIdNum, 'wishlist');
+  const isLiked = hasInteraction(gameIdNum, 'liked');
 
   const togglePlayed = () => {
     if (isPlayed) {
       const interaction = interactions.find(
-        (i) => i.gameId === gameId && i.type === 'played'
+        (i) => i.gameId === gameIdNum && i.type === 'played'
       );
       if (interaction) removeInteraction(interaction.id);
     } else {
       addInteraction({
         id: crypto.randomUUID(),
-        gameId,
+        gameId: gameIdNum,
         userId: 'temp',
         type: 'played',
         createdAt: new Date().toISOString(),
@@ -112,7 +112,7 @@ export default function GameDetailPage() {
   const toggleWishlist = () => {
     if (isWishlisted) {
       const interaction = interactions.find(
-        (i) => i.gameId === gameId && i.type === 'wishlist'
+        (i) => i.gameId === gameIdNum && i.type === 'wishlist'
       );
       if (interaction) removeInteraction(interaction.id);
     } else {
@@ -129,7 +129,7 @@ export default function GameDetailPage() {
   const toggleLike = () => {
     if (isLiked) {
       const interaction = interactions.find(
-        (i) => i.gameId === gameId && i.type === 'liked'
+        (i) => i.gameId === gameIdNum && i.type === 'liked'
       );
       if (interaction) removeInteraction(interaction.id);
     } else {

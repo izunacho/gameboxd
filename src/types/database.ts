@@ -33,7 +33,7 @@ export interface Database {
       games: {
         Row: {
           id: string;
-          rawg_id: number;
+          igdb_id: number;
           name: string;
           background_image: string | null;
           metacritic_score: number | null;
@@ -42,7 +42,7 @@ export interface Database {
         };
         Insert: {
           id?: string;
-          rawg_id: number;
+          igdb_id: number;
           name: string;
           background_image?: string | null;
           metacritic_score?: number | null;
@@ -51,7 +51,7 @@ export interface Database {
         };
         Update: {
           id?: string;
-          rawg_id?: number;
+          igdb_id?: number;
           name?: string;
           background_image?: string | null;
           metacritic_score?: number | null;

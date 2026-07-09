@@ -1,27 +1,42 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getGameDetails } from '@/lib/api-client';
-import { getErrorMessage } from '@/lib/api-client';
+import { useRouter } from 'next/navigation';
+import { getGameDetails, getErrorMessage } from '@/lib/api-client';
 import { IGDBGame, getIGDBImageUrl, formatReleaseDate } from '@/lib/igdb';
 import Image from 'next/image';
-import { Heart, Bookmark, CheckCircle2, Star } from 'lucide-react';
-import { useAppStore } from '@/lib/store';
+import { Heart, Bookmark, CheckCircle2, Star, User } from 'lucide-react';
+import { useAppStore, InteractionType } from '@/lib/store';
+import {
+  submitReview,
+  getGameReviews,
+  addInteractionDb,
+  removeInteractionDb,
+  CommunityReview,
+} from '@/lib/user-data';
 
 interface GameDetailClientProps {
   gameId: string;
 }
 
 export default function GameDetailClient({ gameId }: GameDetailClientProps) {
+  const router = useRouter();
   const [game, setGame] = useState<IGDBGame | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
   const [rating, setRating] = useState(0);
   const [review, setReview] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [formSuccess, setFormSuccess] = useState(false);
 
-  const { hasInteraction, addInteraction, removeInteraction, interactions } = useAppStore();
+  const [reviews, setReviews] = useState<CommunityReview[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
 
+  const { hasInteraction, getInteraction, addInteraction, removeInteraction } = useAppStore();
+
+  // Load game details from IGDB
   useEffect(() => {
     const loadGame = async () => {
       try {
@@ -41,30 +56,70 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
     loadGame();
   }, [gameId]);
 
+  // Load community reviews from Supabase
+  useEffect(() => {
+    const loadReviews = async () => {
+      try {
+        setReviewsLoading(true);
+        const data = await getGameReviews(parseInt(gameId));
+        setReviews(data);
+      } catch (err) {
+        console.error('Failed to load reviews:', err);
+      } finally {
+        setReviewsLoading(false);
+      }
+    };
+
+    loadReviews();
+  }, [gameId]);
+
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!game || rating === 0) {
-      setError('Please provide a rating');
+    if (!game) return;
+    if (rating === 0) {
+      setFormError('Please select a rating');
       return;
     }
 
     setSubmitting(true);
+    setFormError(null);
+    setFormSuccess(false);
     try {
-      addInteraction({
-        id: crypto.randomUUID(),
-        gameId: game.id,
-        userId: 'temp',
-        type: 'played',
-        createdAt: new Date().toISOString(),
-      });
-
+      await submitReview(game, rating, review);
+      setFormSuccess(true);
       setReview('');
       setRating(0);
-      alert('Review submitted successfully!');
-    } catch (err) {
-      setError('Failed to submit review');
+      // Refresh the community reviews so the new one appears immediately
+      setReviews(await getGameReviews(game.id));
+    } catch (err: any) {
+      if (err?.message === 'NOT_LOGGED_IN') {
+        setFormError('You need to log in to post a review.');
+      } else {
+        setFormError('Failed to submit review. Please try again.');
+        console.error(err);
+      }
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const toggle = async (type: InteractionType) => {
+    if (!game) return;
+    const existing = getInteraction(game.id, type);
+    try {
+      if (existing) {
+        removeInteraction(existing.id);
+        await removeInteractionDb(existing.id);
+      } else {
+        const created = await addInteractionDb(game, type);
+        addInteraction(created);
+      }
+    } catch (err: any) {
+      if (err?.message === 'NOT_LOGGED_IN') {
+        router.push('/auth/login');
+      } else {
+        console.error('Failed to save interaction:', err);
+      }
     }
   };
 
@@ -86,61 +141,9 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
     );
   }
 
-  const gameIdNum = game.id;
-  const isPlayed = hasInteraction(gameIdNum, 'played');
-  const isWishlisted = hasInteraction(gameIdNum, 'wishlist');
-  const isLiked = hasInteraction(gameIdNum, 'liked');
-
-  const togglePlayed = () => {
-    if (isPlayed) {
-      const interaction = interactions.find(
-        (i) => i.gameId === gameIdNum && i.type === 'played'
-      );
-      if (interaction) removeInteraction(interaction.id);
-    } else {
-      addInteraction({
-        id: crypto.randomUUID(),
-        gameId: gameIdNum,
-        userId: 'temp',
-        type: 'played',
-        createdAt: new Date().toISOString(),
-      });
-    }
-  };
-
-  const toggleWishlist = () => {
-    if (isWishlisted) {
-      const interaction = interactions.find(
-        (i) => i.gameId === gameIdNum && i.type === 'wishlist'
-      );
-      if (interaction) removeInteraction(interaction.id);
-    } else {
-      addInteraction({
-        id: crypto.randomUUID(),
-        gameId: gameIdNum,
-        userId: 'temp',
-        type: 'wishlist',
-        createdAt: new Date().toISOString(),
-      });
-    }
-  };
-
-  const toggleLike = () => {
-    if (isLiked) {
-      const interaction = interactions.find(
-        (i) => i.gameId === gameIdNum && i.type === 'liked'
-      );
-      if (interaction) removeInteraction(interaction.id);
-    } else {
-      addInteraction({
-        id: crypto.randomUUID(),
-        gameId: gameIdNum,
-        userId: 'temp',
-        type: 'liked',
-        createdAt: new Date().toISOString(),
-      });
-    }
-  };
+  const isPlayed = hasInteraction(game.id, 'played');
+  const isWishlisted = hasInteraction(game.id, 'wishlist');
+  const isLiked = hasInteraction(game.id, 'liked');
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -175,7 +178,7 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
               )}
               {game.aggregated_rating && (
                 <div>
-                  <p className="text-dark-text text-sm">Aggregated Rating</p>
+                  <p className="text-dark-text text-sm">Critic Rating</p>
                   <p className="text-2xl font-bold text-primary">{Math.round(game.aggregated_rating)}</p>
                 </div>
               )}
@@ -184,7 +187,7 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
             {/* Action Buttons */}
             <div className="flex gap-2 mb-6 flex-wrap">
               <button
-                onClick={togglePlayed}
+                onClick={() => toggle('played')}
                 className={`btn flex items-center gap-2 ${
                   isPlayed ? 'btn-primary' : 'btn-secondary'
                 }`}
@@ -193,7 +196,7 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
                 Played
               </button>
               <button
-                onClick={toggleWishlist}
+                onClick={() => toggle('wishlist')}
                 className={`btn flex items-center gap-2 ${
                   isWishlisted ? 'btn-primary' : 'btn-secondary'
                 }`}
@@ -202,7 +205,7 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
                 Wishlist
               </button>
               <button
-                onClick={toggleLike}
+                onClick={() => toggle('liked')}
                 className={`btn flex items-center gap-2 ${
                   isLiked ? 'btn-primary' : 'btn-secondary'
                 }`}
@@ -287,24 +290,63 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
             <p className="text-xs text-dark-text mt-1">{review.length}/500</p>
           </div>
 
-          {error && (
+          {formError && (
             <div className="bg-red-500/10 border border-red-500/50 text-red-400 p-3 rounded-lg text-sm">
-              {error}
+              {formError}
             </div>
           )}
 
-          <button type="submit" disabled={submitting || rating === 0} className="btn-primary w-full">
+          {formSuccess && (
+            <div className="bg-green-500/10 border border-green-500/50 text-green-400 p-3 rounded-lg text-sm">
+              Review published! You can see it below.
+            </div>
+          )}
+
+          <button type="submit" disabled={submitting || rating === 0} className="btn-primary w-full disabled:opacity-50">
             {submitting ? 'Submitting...' : 'Submit Review'}
           </button>
         </form>
       </div>
 
-      {/* Reviews Section */}
+      {/* Community Reviews */}
       <div>
-        <h2 className="text-2xl font-bold mb-6">Community Reviews</h2>
-        <div className="card p-6 text-center text-dark-text">
-          <p>Reviews will appear here once the backend is connected</p>
-        </div>
+        <h2 className="text-2xl font-bold mb-6">
+          Community Reviews {reviews.length > 0 && `(${reviews.length})`}
+        </h2>
+
+        {reviewsLoading && (
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border border-dark-border border-t-primary"></div>
+          </div>
+        )}
+
+        {!reviewsLoading && reviews.length === 0 && (
+          <div className="card p-6 text-center text-dark-text">
+            <p>No reviews yet. Be the first to review this game!</p>
+          </div>
+        )}
+
+        {!reviewsLoading && reviews.length > 0 && (
+          <div className="space-y-4">
+            {reviews.map((r) => (
+              <div key={r.id} className="card p-5">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="flex items-center gap-2 font-semibold text-primary">
+                    <User className="w-4 h-4" />
+                    {r.username}
+                  </span>
+                  <span className="bg-primary text-black font-bold px-2 py-0.5 rounded text-sm">
+                    {r.rating}/100
+                  </span>
+                </div>
+                {r.content && <p className="text-dark-text leading-relaxed">{r.content}</p>}
+                <p className="text-xs text-dark-text mt-3">
+                  {new Date(r.created_at).toLocaleDateString()}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import Header from '@/components/Header';
+import UserDataLoader from '@/components/UserDataLoader';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -42,6 +43,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Gameboxd" />
       </head>
       <body className="bg-dark-bg text-dark-text">
+        <UserDataLoader />
         <Header />
         <main className="min-h-screen pb-20 md:pb-0">
           {children}

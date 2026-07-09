@@ -107,18 +107,25 @@ export interface IGDBGame {
 }
 
 /**
- * Search games by name
- * Returns up to 10 results
+ * Search games by name.
+ * Case-insensitive "contains" match ("mario" finds "New Super Mario Bros."),
+ * sorted by popularity so well-known games come first. Up to 50 results.
  */
 export async function searchGames(query: string): Promise<IGDBGame[]> {
   if (!query.trim()) {
     return [];
   }
 
+  // Strip characters that would break the IGDB query string
+  const safeQuery = query.trim().replace(/["\\]/g, '');
+
   try {
     const client = await createIGDBClient();
 
-    const response = await client.post('/games', `search "${query}"; fields id, name, cover.*, rating, first_release_date, platforms.*, genres.*, summary; limit 10;`);
+    const response = await client.post(
+      '/games',
+      `fields id, name, cover.*, rating, first_release_date, platforms.*, genres.*, summary; where name ~ *"${safeQuery}"*; sort total_rating_count desc; limit 50;`
+    );
 
     return response.data;
   } catch (error) {

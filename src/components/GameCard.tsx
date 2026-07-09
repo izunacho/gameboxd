@@ -2,75 +2,40 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Heart, Bookmark, CheckCircle2 } from 'lucide-react';
-import { IGDBGame, getIGDBImageUrl, formatReleaseDate } from '@/lib/igdb';
-import { useAppStore } from '@/lib/store';
-import { useState } from 'react';
+import { IGDBGame, getIGDBImageUrl } from '@/lib/igdb';
+import { useAppStore, InteractionType } from '@/lib/store';
+import { addInteractionDb, removeInteractionDb } from '@/lib/user-data';
 
 interface GameCardProps {
   game: IGDBGame;
 }
 
 export default function GameCard({ game }: GameCardProps) {
-  const { hasInteraction, addInteraction, removeInteraction, interactions } = useAppStore();
-  const [isLiked, setIsLiked] = useState(hasInteraction(game.id, 'liked'));
-  const [isWishlisted, setIsWishlisted] = useState(hasInteraction(game.id, 'wishlist'));
-  const [isPlayed, setIsPlayed] = useState(hasInteraction(game.id, 'played'));
+  const router = useRouter();
+  const { hasInteraction, getInteraction, addInteraction, removeInteraction } = useAppStore();
 
-  const handleLike = () => {
-    if (isLiked) {
-      const interaction = interactions.find(
-        (i) => i.gameId === game.id && i.type === 'liked'
-      );
-      if (interaction) removeInteraction(interaction.id);
-      setIsLiked(false);
-    } else {
-      addInteraction({
-        id: crypto.randomUUID(),
-        gameId: game.id,
-        userId: 'temp', // Will be replaced with actual user ID
-        type: 'liked',
-        createdAt: new Date().toISOString(),
-      });
-      setIsLiked(true);
-    }
-  };
+  const isPlayed = hasInteraction(game.id, 'played');
+  const isWishlisted = hasInteraction(game.id, 'wishlist');
+  const isLiked = hasInteraction(game.id, 'liked');
 
-  const handleWishlist = () => {
-    if (isWishlisted) {
-      const interaction = interactions.find(
-        (i) => i.gameId === game.id && i.type === 'wishlist'
-      );
-      if (interaction) removeInteraction(interaction.id);
-      setIsWishlisted(false);
-    } else {
-      addInteraction({
-        id: crypto.randomUUID(),
-        gameId: game.id,
-        userId: 'temp',
-        type: 'wishlist',
-        createdAt: new Date().toISOString(),
-      });
-      setIsWishlisted(true);
-    }
-  };
-
-  const handlePlayed = () => {
-    if (isPlayed) {
-      const interaction = interactions.find(
-        (i) => i.gameId === game.id && i.type === 'played'
-      );
-      if (interaction) removeInteraction(interaction.id);
-      setIsPlayed(false);
-    } else {
-      addInteraction({
-        id: crypto.randomUUID(),
-        gameId: game.id,
-        userId: 'temp',
-        type: 'played',
-        createdAt: new Date().toISOString(),
-      });
-      setIsPlayed(true);
+  const toggle = async (type: InteractionType) => {
+    const existing = getInteraction(game.id, type);
+    try {
+      if (existing) {
+        removeInteraction(existing.id);
+        await removeInteractionDb(existing.id);
+      } else {
+        const created = await addInteractionDb(game, type);
+        addInteraction(created);
+      }
+    } catch (err: any) {
+      if (err?.message === 'NOT_LOGGED_IN') {
+        router.push('/auth/login');
+      } else {
+        console.error('Failed to save interaction:', err);
+      }
     }
   };
 
@@ -116,12 +81,10 @@ export default function GameCard({ game }: GameCardProps) {
             <button
               onClick={(e) => {
                 e.preventDefault();
-                handlePlayed();
+                toggle('played');
               }}
               className={`flex-1 btn text-xs py-1 flex items-center justify-center gap-1 ${
-                isPlayed
-                  ? 'bg-primary text-black'
-                  : 'bg-dark-border hover:bg-dark-border'
+                isPlayed ? 'bg-primary text-black' : 'bg-dark-border'
               }`}
               title="Mark as played"
             >
@@ -131,7 +94,7 @@ export default function GameCard({ game }: GameCardProps) {
             <button
               onClick={(e) => {
                 e.preventDefault();
-                handleWishlist();
+                toggle('wishlist');
               }}
               className={`flex-1 btn text-xs py-1 flex items-center justify-center gap-1 ${
                 isWishlisted ? 'bg-primary text-black' : 'bg-dark-border'
@@ -144,7 +107,7 @@ export default function GameCard({ game }: GameCardProps) {
             <button
               onClick={(e) => {
                 e.preventDefault();
-                handleLike();
+                toggle('liked');
               }}
               className={`flex-1 btn text-xs py-1 flex items-center justify-center gap-1 ${
                 isLiked ? 'bg-primary text-black' : 'bg-dark-border'

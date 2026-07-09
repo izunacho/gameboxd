@@ -75,10 +75,14 @@ export default function Header() {
 
             {username ? (
               <div className="flex items-center gap-3">
-                <span className="flex items-center gap-2 text-sm text-primary">
+                <Link
+                  href="/profile"
+                  className="flex items-center gap-2 text-sm text-primary hover:underline"
+                  title="View your profile"
+                >
                   <User className="w-4 h-4" />
                   {username}
-                </span>
+                </Link>
                 <button onClick={handleLogout} className="btn-secondary text-sm flex items-center gap-1">
                   <LogOut className="w-4 h-4" />
                   Logout
@@ -120,10 +124,14 @@ export default function Header() {
             <div className="pt-4 space-y-2 border-t border-dark-border">
               {username ? (
                 <>
-                  <p className="flex items-center gap-2 text-sm text-primary">
+                  <Link
+                    href="/profile"
+                    className="flex items-center gap-2 text-sm text-primary"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
                     <User className="w-4 h-4" />
                     {username}
-                  </p>
+                  </Link>
                   <button onClick={handleLogout} className="w-full btn-secondary text-center">
                     Logout
                   </button>

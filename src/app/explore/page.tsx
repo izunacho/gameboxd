@@ -1,44 +1,34 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { searchGames, getTrendingGames, getErrorMessage } from '@/lib/api-client';
 import { IGDBGame } from '@/lib/igdb';
 import GameCard from '@/components/GameCard';
 import { Search } from 'lucide-react';
 
-export default function ExplorePage() {
+function ExploreContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const activeQuery = searchParams.get('q') || '';
+
+  const [searchInput, setSearchInput] = useState(activeQuery);
   const [games, setGames] = useState<IGDBGame[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [hasSearched, setHasSearched] = useState(false);
 
-  // On mount: search the ?q= param from the header search box, or load trending
+  // The URL is the source of truth: whenever ?q= changes (from this page's
+  // form or the header search box), run the search — or load trending.
   useEffect(() => {
-    const queryFromUrl = new URLSearchParams(window.location.search).get('q');
-    if (queryFromUrl && !hasSearched) {
-      setSearchQuery(queryFromUrl);
-      (async () => {
-        try {
-          setLoading(true);
-          setError(null);
-          const data = await searchGames(queryFromUrl);
-          setGames(data);
-          setHasSearched(true);
-        } catch (err) {
-          setError(getErrorMessage(err));
-        } finally {
-          setLoading(false);
-        }
-      })();
-      return;
-    }
+    setSearchInput(activeQuery);
 
-    const loadTrendingGames = async () => {
+    const load = async () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await getTrendingGames(20);
+        const data = activeQuery
+          ? await searchGames(activeQuery)
+          : await getTrendingGames(20);
         setGames(data);
       } catch (err) {
         setError(getErrorMessage(err));
@@ -48,35 +38,18 @@ export default function ExplorePage() {
       }
     };
 
-    if (!hasSearched) {
-      loadTrendingGames();
-    }
-  }, [hasSearched]);
+    load();
+  }, [activeQuery]);
 
-  // Handle search
-  const handleSearch = async (e: React.FormEvent) => {
+  const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!searchQuery.trim()) return;
-
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await searchGames(searchQuery);
-      setGames(data);
-      setHasSearched(true);
-    } catch (err) {
-      setError(getErrorMessage(err));
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+    const value = searchInput.trim();
+    if (value) router.push(`/explore?q=${encodeURIComponent(value)}`);
   };
 
-  // Handle clear search
   const handleClearSearch = () => {
-    setSearchQuery('');
-    setHasSearched(false);
-    setGames([]);
+    setSearchInput('');
+    router.push('/explore');
   };
 
   return (
@@ -88,10 +61,9 @@ export default function ExplorePage() {
           <input
             type="text"
             placeholder="Search games..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             className="w-full pl-12 pr-4 py-3 rounded-lg bg-dark-surface border border-dark-border focus:border-primary outline-none"
-            disabled={loading}
           />
         </div>
         <p className="text-xs text-dark-text mt-2">Powered by IGDB</p>
@@ -100,13 +72,10 @@ export default function ExplorePage() {
       {/* Title */}
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold">
-          {hasSearched ? `Search Results for "${searchQuery}"` : 'Trending Games'}
+          {activeQuery ? `Search Results for "${activeQuery}"` : 'Trending Games'}
         </h1>
-        {hasSearched && (
-          <button
-            onClick={handleClearSearch}
-            className="btn-secondary text-sm"
-          >
+        {activeQuery && (
+          <button onClick={handleClearSearch} className="btn-secondary text-sm">
             Clear Search
           </button>
         )}
@@ -143,10 +112,24 @@ export default function ExplorePage() {
       {!loading && games.length === 0 && !error && (
         <div className="text-center py-12">
           <p className="text-dark-text text-lg">
-            {hasSearched ? 'No games found. Try a different search.' : 'No games available'}
+            {activeQuery ? 'No games found. Try a different search.' : 'No games available'}
           </p>
         </div>
       )}
     </div>
+  );
+}
+
+export default function ExplorePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex justify-center items-center py-24">
+          <div className="animate-spin rounded-full h-12 w-12 border border-dark-border border-t-primary"></div>
+        </div>
+      }
+    >
+      <ExploreContent />
+    </Suspense>
   );
 }

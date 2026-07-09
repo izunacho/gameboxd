@@ -139,7 +139,12 @@ export default function CommunityPage() {
                     </Link>
                     <p className="flex items-center gap-1.5 text-sm text-dark-text mt-0.5">
                       <User className="w-3.5 h-3.5 text-primary" />
-                      <span className="text-primary font-medium">{r.username}</span>
+                      <Link
+                        href={`/user/${encodeURIComponent(r.username)}`}
+                        className="text-primary font-medium hover:underline"
+                      >
+                        {r.username}
+                      </Link>
                       <span>· {timeAgo(r.created_at)}</span>
                     </p>
                   </div>

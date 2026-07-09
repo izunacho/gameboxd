@@ -3,40 +3,36 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
-import { loadMyLibrary, MyLibrary } from '@/lib/user-data';
+import { getPublicProfile, PublicProfile } from '@/lib/user-data';
 import GameTile from '@/components/GameTile';
-import { User, CheckCircle2, Bookmark, Heart, Star } from 'lucide-react';
+import { User, CheckCircle2, Bookmark, Heart, Star, UserX } from 'lucide-react';
 
-export default function ProfilePage() {
-  const [username, setUsername] = useState<string | null>(null);
-  const [email, setEmail] = useState<string | null>(null);
-  const [library, setLibrary] = useState<MyLibrary>({ interactions: [], reviews: [] });
+interface PublicProfileClientProps {
+  username: string;
+}
+
+export default function PublicProfileClient({ username }: PublicProfileClientProps) {
+  const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [notLoggedIn, setNotLoggedIn] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const { data } = await supabase.auth.getUser();
-        if (!data.user) {
-          setNotLoggedIn(true);
-          return;
-        }
-        setUsername(data.user.user_metadata?.username || null);
-        setEmail(data.user.email || null);
-        setLibrary(await loadMyLibrary());
+        setLoading(true);
+        setError(null);
+        setProfile(await getPublicProfile(username));
       } catch (err) {
-        console.error('Failed to load profile:', err);
+        setError('Failed to load this profile. Please try again.');
+        console.error(err);
       } finally {
         setLoading(false);
       }
     };
-
     load();
-  }, []);
+  }, [username]);
 
-  if (loading && !notLoggedIn) {
+  if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border border-dark-border border-t-primary"></div>
@@ -44,19 +40,30 @@ export default function ProfilePage() {
     );
   }
 
-  if (notLoggedIn) {
+  if (error) {
+    return (
+      <div className="max-w-md mx-auto px-4 py-24 text-center">
+        <p className="text-red-400">{error}</p>
+      </div>
+    );
+  }
+
+  if (!profile) {
     return (
       <div className="max-w-md mx-auto px-4 py-24 text-center space-y-4">
-        <User className="w-12 h-12 text-primary mx-auto" />
-        <h1 className="text-2xl font-bold">Your Profile</h1>
-        <p className="text-dark-text">Log in to see your games and reviews.</p>
-        <Link href="/auth/login" className="btn-primary inline-block">
-          Log In
+        <UserX className="w-12 h-12 text-dark-text mx-auto" />
+        <h1 className="text-2xl font-bold">User not found</h1>
+        <p className="text-dark-text">
+          There's no player called <span className="text-primary">{username}</span> on Gameboxd.
+        </p>
+        <Link href="/community" className="btn-primary inline-block">
+          Back to Community
         </Link>
       </div>
     );
   }
 
+  const { library } = profile;
   const played = library.interactions.filter((i) => i.type === 'played');
   const wishlist = library.interactions.filter((i) => i.type === 'wishlist');
   const liked = library.interactions.filter((i) => i.type === 'liked');
@@ -69,8 +76,15 @@ export default function ProfilePage() {
           <User className="w-10 h-10 text-primary" />
         </div>
         <div>
-          <h1 className="text-3xl font-bold">{username || 'Player'}</h1>
-          {email && <p className="text-dark-text text-sm">{email}</p>}
+          <h1 className="text-3xl font-bold">{profile.username}</h1>
+          {profile.bio && <p className="text-dark-text mt-1">{profile.bio}</p>}
+          <p className="text-dark-text text-sm mt-1">
+            Joined{' '}
+            {new Date(profile.created_at).toLocaleDateString('en-US', {
+              month: 'long',
+              year: 'numeric',
+            })}
+          </p>
           <p className="text-dark-text text-sm mt-1">
             {played.length} played · {wishlist.length} wishlisted · {liked.length} liked ·{' '}
             {library.reviews.length} review(s)
@@ -78,21 +92,14 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* My Reviews */}
+      {/* Reviews */}
       <section>
         <h2 className="flex items-center gap-2 text-2xl font-bold mb-6">
           <Star className="w-6 h-6 text-primary" />
-          My Reviews
+          Reviews
         </h2>
         {library.reviews.length === 0 ? (
-          <div className="card p-6 text-center text-dark-text">
-            <p>
-              You haven't reviewed any games yet.{' '}
-              <Link href="/explore" className="text-primary hover:underline">
-                Find one to rate!
-              </Link>
-            </p>
-          </div>
+          <p className="text-dark-text">No reviews written yet.</p>
         ) : (
           <div className="space-y-4">
             {library.reviews.map((r) => (
@@ -141,7 +148,7 @@ export default function ProfilePage() {
           Played ({played.length})
         </h2>
         {played.length === 0 ? (
-          <p className="text-dark-text">No games marked as played yet.</p>
+          <p className="text-dark-text">No games marked as played.</p>
         ) : (
           <div className="game-grid">
             {played.map((i) => (
@@ -158,7 +165,7 @@ export default function ProfilePage() {
           Wishlist ({wishlist.length})
         </h2>
         {wishlist.length === 0 ? (
-          <p className="text-dark-text">Your wishlist is empty.</p>
+          <p className="text-dark-text">Wishlist is empty.</p>
         ) : (
           <div className="game-grid">
             {wishlist.map((i) => (
@@ -175,7 +182,7 @@ export default function ProfilePage() {
           Liked ({liked.length})
         </h2>
         {liked.length === 0 ? (
-          <p className="text-dark-text">You haven't liked any games yet.</p>
+          <p className="text-dark-text">No liked games.</p>
         ) : (
           <div className="game-grid">
             {liked.map((i) => (

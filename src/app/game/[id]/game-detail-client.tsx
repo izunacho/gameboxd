@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getGameDetails, getErrorMessage } from '@/lib/api-client';
 import { IGDBGame, getIGDBImageUrl, formatReleaseDate } from '@/lib/igdb';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Heart, Bookmark, CheckCircle2, Star, User } from 'lucide-react';
 import { useAppStore, InteractionType } from '@/lib/store';
 import {
@@ -331,10 +332,13 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
             {reviews.map((r) => (
               <div key={r.id} className="card p-5">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="flex items-center gap-2 font-semibold text-primary">
+                  <Link
+                    href={`/user/${encodeURIComponent(r.username)}`}
+                    className="flex items-center gap-2 font-semibold text-primary hover:underline"
+                  >
                     <User className="w-4 h-4" />
                     {r.username}
-                  </span>
+                  </Link>
                   <span className="bg-primary text-black font-bold px-2 py-0.5 rounded text-sm">
                     {r.rating}/100
                   </span>

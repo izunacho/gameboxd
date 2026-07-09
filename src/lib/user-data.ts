@@ -202,21 +202,18 @@ export interface MyLibrary {
   }>;
 }
 
-/** Everything for the profile page: saved games and written reviews. */
-export async function loadMyLibrary(): Promise<MyLibrary> {
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) return { interactions: [], reviews: [] };
-
+/** Saved games and written reviews for any user id. */
+async function fetchLibraryFor(userId: string): Promise<MyLibrary> {
   const [ints, revs] = await Promise.all([
     supabase
       .from('interactions')
       .select('id, type, created_at, games(igdb_id, name, background_image, released)')
-      .eq('user_id', auth.user.id)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false }),
     supabase
       .from('reviews')
       .select('id, rating, content, created_at, games(igdb_id, name, background_image, released)')
-      .eq('user_id', auth.user.id)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false }),
   ]);
   if (ints.error) throw ints.error;
@@ -235,5 +232,37 @@ export async function loadMyLibrary(): Promise<MyLibrary> {
         created_at: r.created_at,
         game: r.games,
       })),
+  };
+}
+
+/** Everything for the logged-in user's profile page. */
+export async function loadMyLibrary(): Promise<MyLibrary> {
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return { interactions: [], reviews: [] };
+  return fetchLibraryFor(auth.user.id);
+}
+
+export interface PublicProfile {
+  username: string;
+  bio: string | null;
+  created_at: string;
+  library: MyLibrary;
+}
+
+/** Public profile by username — viewable by anyone. Returns null if not found. */
+export async function getPublicProfile(username: string): Promise<PublicProfile | null> {
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('id, username, bio, created_at')
+    .eq('username', username)
+    .maybeSingle();
+  if (error) throw error;
+  if (!user) return null;
+
+  return {
+    username: user.username,
+    bio: user.bio,
+    created_at: user.created_at,
+    library: await fetchLibraryFor(user.id),
   };
 }

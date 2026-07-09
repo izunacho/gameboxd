@@ -7,14 +7,10 @@ import { IGDBGame, getIGDBImageUrl, formatReleaseDate } from '@/lib/igdb';
 import Image from 'next/image';
 import { Heart, Bookmark, CheckCircle2, Star } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
+import { useParams } from 'next/navigation';
 
-interface GameDetailPageProps {
-  params: {
-    id: string;
-  };
-}
-
-export default function GameDetailPage({ params }: GameDetailPageProps) {
+export default function GameDetailPage() {
+  const params = useParams() as { id: string };
   const [game, setGame] = useState<IGDBGame | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

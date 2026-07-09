@@ -155,6 +155,42 @@ export async function removeInteractionDb(interactionId: string) {
   if (error) throw error;
 }
 
+export interface FeedReview {
+  id: string;
+  rating: number;
+  content: string | null;
+  created_at: string;
+  username: string;
+  game: LibraryGame;
+}
+
+/**
+ * Community feed: latest reviews from all users, newest first.
+ * Paginated — pass increasing `page` values to load more.
+ */
+export async function getCommunityFeed(page = 0, pageSize = 20): Promise<FeedReview[]> {
+  const from = page * pageSize;
+  const { data, error } = await supabase
+    .from('reviews')
+    .select(
+      'id, rating, content, created_at, users(username), games(igdb_id, name, background_image, released)'
+    )
+    .order('created_at', { ascending: false })
+    .range(from, from + pageSize - 1);
+  if (error) throw error;
+
+  return (data || [])
+    .filter((r: any) => r.games)
+    .map((r: any) => ({
+      id: r.id,
+      rating: r.rating,
+      content: r.content,
+      created_at: r.created_at,
+      username: r.users?.username || 'anonymous',
+      game: r.games,
+    }));
+}
+
 export interface MyLibrary {
   interactions: Array<{ id: string; type: InteractionType; game: LibraryGame }>;
   reviews: Array<{

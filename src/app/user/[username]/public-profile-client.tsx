@@ -54,7 +54,7 @@ export default function PublicProfileClient({ username }: PublicProfileClientPro
         <UserX className="w-12 h-12 text-dark-text mx-auto" />
         <h1 className="text-2xl font-bold">User not found</h1>
         <p className="text-dark-text">
-          There's no player called <span className="text-primary">{username}</span> on Gameboxd.
+          There's no player called <span className="text-primary">{username}</span> on Hitboxd.
         </p>
         <Link href="/community" className="btn-primary inline-block">
           Back to Community

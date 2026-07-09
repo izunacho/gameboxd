@@ -13,7 +13,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'Gameboxd - Share Your Game Reviews',
+  title: 'Hitboxd - Share Your Game Reviews',
   description: 'Rate, review, and share your favorite video games. Discover what others are playing.',
   manifest: '/manifest.json',
   icons: {
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Gameboxd',
+    title: 'Hitboxd',
   },
   formatDetection: {
     telephone: false,
@@ -41,7 +41,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Gameboxd" />
+        <meta name="apple-mobile-web-app-title" content="Hitboxd" />
       </head>
       <body className="bg-dark-bg text-dark-text">
         <PWARegister />

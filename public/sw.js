@@ -1,5 +1,5 @@
 /**
- * Gameboxd Service Worker
+ * Hitboxd Service Worker
  *
  * Strategy:
  *  - Pages (navigations): network first, offline.html as fallback.
@@ -10,7 +10,7 @@
  *  - Game cover images (IGDB CDN + next/image): cache first with a size cap.
  */
 
-const VERSION = 'gameboxd-v2';
+const VERSION = 'hitboxd-v3';
 const STATIC_CACHE = `${VERSION}-static`;
 const IMAGE_CACHE = `${VERSION}-images`;
 const OFFLINE_URL = '/offline.html';

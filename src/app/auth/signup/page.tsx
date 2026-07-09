@@ -61,7 +61,7 @@ export default function SignUpPage() {
               <UserPlus className="w-8 h-8 text-primary" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold">Join Gameboxd</h1>
+          <h1 className="text-3xl font-bold">Join Hitboxd</h1>
           <p className="text-dark-text mt-2">Create an account to start rating games</p>
         </div>
 

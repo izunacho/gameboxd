@@ -70,7 +70,7 @@ export default function CommunityPage() {
         <Users className="w-8 h-8 text-primary" />
         <h1 className="text-4xl font-bold">Community</h1>
       </div>
-      <p className="text-dark-text mb-10">The latest reviews from Gameboxd players.</p>
+      <p className="text-dark-text mb-10">The latest reviews from Hitboxd players.</p>
 
       {/* Error */}
       {error && (

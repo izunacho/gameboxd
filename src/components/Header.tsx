@@ -40,7 +40,7 @@ export default function Header() {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 text-xl font-bold text-primary">
             <Gamepad2 className="w-6 h-6" />
-            <span>Gameboxd</span>
+            <span>Hitboxd</span>
           </Link>
 
           {/* Desktop Navigation */}

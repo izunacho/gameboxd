@@ -37,7 +37,7 @@ export default function Home() {
             </div>
           </div>
           <h1 className="text-5xl md:text-6xl font-bold text-white">
-            Gameboxd
+            Hitboxd
           </h1>
           <p className="text-xl text-dark-text">
             {loggedIn ? (
@@ -69,7 +69,7 @@ export default function Home() {
 
       {/* Features Section */}
       <section className="max-w-6xl mx-auto px-4 py-12">
-        <h2 className="text-3xl font-bold mb-12 text-center">Why Gameboxd?</h2>
+        <h2 className="text-3xl font-bold mb-12 text-center">Why Hitboxd?</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="card p-6">
             <TrendingUp className="w-8 h-8 text-primary mb-4" />

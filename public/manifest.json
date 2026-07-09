@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "Gameboxd",
-  "short_name": "Gameboxd",
+  "name": "Hitboxd",
+  "short_name": "Hitboxd",
   "description": "Rate, review, and share your favorite video games",
   "start_url": "/",
   "scope": "/",

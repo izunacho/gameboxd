@@ -1,16 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { getGameDetails } from '@/lib/api-client';
 import { getErrorMessage } from '@/lib/api-client';
 import { IGDBGame, getIGDBImageUrl, formatReleaseDate } from '@/lib/igdb';
 import Image from 'next/image';
 import { Heart, Bookmark, CheckCircle2, Star } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
-import { useParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 
 export default function GameDetailPage() {
-  const params = useParams() as { id: string };
+  const pathname = usePathname();
+  const gameId = pathname.split('/').pop();
   const [game, setGame] = useState<IGDBGame | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,8 +27,8 @@ export default function GameDetailPage() {
       try {
         setLoading(true);
         setError(null);
-        const gameId = parseInt(params.id);
-        const data = await getGameDetails(gameId);
+        const id = parseInt(gameId || '0');
+        const data = await getGameDetails(id);
         setGame(data);
       } catch (err) {
         setError(getErrorMessage(err));

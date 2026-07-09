@@ -13,10 +13,11 @@ import { getGameDetails } from '@/lib/igdb';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const gameId = parseInt(params.id, 10);
+    const resolvedParams = await params;
+    const gameId = parseInt(resolvedParams.id, 10);
 
     // Validate input
     if (isNaN(gameId) || gameId <= 0) {

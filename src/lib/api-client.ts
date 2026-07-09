@@ -8,10 +8,10 @@
 import axios from 'axios';
 import { IGDBGame } from './igdb';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-
+// Relative base URL: the API routes live on the same origin as the frontend,
+// so this works on localhost and on any deployment domain without configuration.
 const apiClient = axios.create({
-  baseURL: `${API_BASE_URL}/api`,
+  baseURL: '/api',
   timeout: 10000,
 });
 

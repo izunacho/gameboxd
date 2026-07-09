@@ -13,8 +13,27 @@ export default function ExplorePage() {
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
 
-  // Load trending games on mount
+  // On mount: search the ?q= param from the header search box, or load trending
   useEffect(() => {
+    const queryFromUrl = new URLSearchParams(window.location.search).get('q');
+    if (queryFromUrl && !hasSearched) {
+      setSearchQuery(queryFromUrl);
+      (async () => {
+        try {
+          setLoading(true);
+          setError(null);
+          const data = await searchGames(queryFromUrl);
+          setGames(data);
+          setHasSearched(true);
+        } catch (err) {
+          setError(getErrorMessage(err));
+        } finally {
+          setLoading(false);
+        }
+      })();
+      return;
+    }
+
     const loadTrendingGames = async () => {
       try {
         setLoading(true);

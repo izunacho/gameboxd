@@ -1,0 +1,95 @@
+/**
+ * Frontend API Client
+ * Calls our Next.js API routes (not IGDB directly)
+ *
+ * This ensures IGDB credentials stay server-side only
+ */
+
+import axios from 'axios';
+import { IGDBGame } from './igdb';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
+const apiClient = axios.create({
+  baseURL: `${API_BASE_URL}/api`,
+  timeout: 10000,
+});
+
+/**
+ * Search for games
+ * Calls: GET /api/games/search?q=query
+ */
+export async function searchGames(query: string): Promise<IGDBGame[]> {
+  try {
+    if (!query.trim()) {
+      return [];
+    }
+
+    const response = await apiClient.get('/games/search', {
+      params: { q: query },
+    });
+
+    return response.data.data || [];
+  } catch (error) {
+    console.error('Error searching games:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get game details
+ * Calls: GET /api/games/[id]
+ */
+export async function getGameDetails(gameId: number): Promise<IGDBGame | null> {
+  try {
+    if (!gameId || gameId <= 0) {
+      return null;
+    }
+
+    const response = await apiClient.get(`/games/${gameId}`);
+
+    return response.data.data || null;
+  } catch (error) {
+    console.error('Error fetching game details:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get trending games
+ * Calls: GET /api/games/trending
+ */
+export async function getTrendingGames(limit = 20): Promise<IGDBGame[]> {
+  try {
+    const response = await apiClient.get('/games/trending', {
+      params: { limit },
+    });
+
+    return response.data.data || [];
+  } catch (error) {
+    console.error('Error fetching trending games:', error);
+    throw error;
+  }
+}
+
+/**
+ * Handle API errors with user-friendly messages
+ */
+export function getErrorMessage(error: unknown): string {
+  if (axios.isAxiosError(error)) {
+    if (error.response?.status === 404) {
+      return 'Game not found';
+    }
+    if (error.response?.status === 400) {
+      return error.response.data?.error || 'Invalid search query';
+    }
+    if (error.response?.status === 500) {
+      return 'Server error. Please try again later.';
+    }
+    if (error.code === 'ECONNABORTED') {
+      return 'Request timeout. Please try again.';
+    }
+  }
+
+  return 'Failed to load games. Please try again.';
+}

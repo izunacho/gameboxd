@@ -1,7 +1,31 @@
+'use client';
+
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { Gamepad2, TrendingUp, Users } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 export default function Home() {
+  // undefined = still checking, null = logged out, string = display name
+  const [user, setUser] = useState<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      const u = data.user;
+      setUser(u ? u.user_metadata?.username || u.email || '' : null);
+    });
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      const u = session?.user;
+      setUser(u ? u.user_metadata?.username || u.email || '' : null);
+    });
+
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  const loggedIn = typeof user === 'string';
+  const loggedOut = user === null;
+
   return (
     <div className="space-y-8">
       {/* Hero Section */}
@@ -16,15 +40,29 @@ export default function Home() {
             Gameboxd
           </h1>
           <p className="text-xl text-dark-text">
-            Rate, review, and share your favorite video games with the community.
+            {loggedIn ? (
+              <>
+                Welcome back, <span className="text-primary font-semibold">{user}</span>! What
+                are you playing today?
+              </>
+            ) : (
+              'Rate, review, and share your favorite video games with the community.'
+            )}
           </p>
-          <div className="flex gap-4 justify-center pt-6">
-            <Link href="/auth/signup" className="btn-primary">
-              Get Started
-            </Link>
-            <Link href="/explore" className="btn-secondary">
+          <div className="flex gap-4 justify-center pt-6 flex-wrap">
+            {loggedOut && (
+              <Link href="/auth/signup" className="btn-primary">
+                Get Started
+              </Link>
+            )}
+            <Link href="/explore" className={loggedIn ? 'btn-primary' : 'btn-secondary'}>
               Explore Games
             </Link>
+            {loggedIn && (
+              <Link href="/community" className="btn-secondary">
+                Community
+              </Link>
+            )}
           </div>
         </div>
       </section>
@@ -57,16 +95,18 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="max-w-2xl mx-auto px-4 py-12 text-center">
-        <h2 className="text-3xl font-bold mb-4">Ready to join the community?</h2>
-        <p className="text-dark-text mb-6">
-          Sign up now to start rating games and discovering what's trending.
-        </p>
-        <Link href="/auth/signup" className="btn-primary inline-block">
-          Create Account
-        </Link>
-      </section>
+      {/* CTA Section — only for visitors without an account */}
+      {loggedOut && (
+        <section className="max-w-2xl mx-auto px-4 py-12 text-center">
+          <h2 className="text-3xl font-bold mb-4">Ready to join the community?</h2>
+          <p className="text-dark-text mb-6">
+            Sign up now to start rating games and discovering what's trending.
+          </p>
+          <Link href="/auth/signup" className="btn-primary inline-block">
+            Create Account
+          </Link>
+        </section>
+      )}
     </div>
   );
 }

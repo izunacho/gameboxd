@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { RAWGGame } from './rawg';
 
 export interface UserReview {
   id: string;

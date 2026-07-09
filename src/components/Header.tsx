@@ -48,9 +48,6 @@ export default function Header() {
             <Link href="/explore" className="hover:text-primary transition">
               Explore
             </Link>
-            <Link href="/trending" className="hover:text-primary transition">
-              Trending
-            </Link>
             <Link href="/community" className="hover:text-primary transition">
               Community
             </Link>
@@ -114,9 +111,6 @@ export default function Header() {
           <nav className="md:hidden mt-4 space-y-3 pb-4 border-t border-dark-border pt-4">
             <Link href="/explore" className="block hover:text-primary" onClick={() => setIsMenuOpen(false)}>
               Explore
-            </Link>
-            <Link href="/trending" className="block hover:text-primary" onClick={() => setIsMenuOpen(false)}>
-              Trending
             </Link>
             <Link href="/community" className="block hover:text-primary" onClick={() => setIsMenuOpen(false)}>
               Community

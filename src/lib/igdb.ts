@@ -104,6 +104,7 @@ export interface IGDBGame {
   storyline?: string;
   aggregated_rating?: number;
   aggregated_rating_count?: number;
+  total_rating?: number;
 }
 
 /**
@@ -158,23 +159,39 @@ export async function getGameDetails(gameId: number): Promise<IGDBGame | null> {
   }
 }
 
+const GAME_FIELDS =
+  'id, name, cover.*, rating, total_rating, first_release_date, platforms.*, genres.*';
+
+export type BrowseList = 'trending' | 'top' | 'new' | 'upcoming';
+
+export const BROWSE_LISTS: BrowseList[] = ['trending', 'top', 'new', 'upcoming'];
+
 /**
- * Get trending/popular games
- * Returns top rated games
+ * Curated browse lists:
+ *  - trending: most talked-about games of the last 12 months
+ *  - top:      all-time highest rated (with enough votes to be credible)
+ *  - new:      released in the last 90 days
+ *  - upcoming: future releases with community buzz, soonest first
  */
-export async function getTrendingGames(limit = 20): Promise<IGDBGame[]> {
+export async function getBrowseGames(list: BrowseList, limit = 20): Promise<IGDBGame[]> {
+  const now = Math.floor(Date.now() / 1000);
+  const yearAgo = now - 365 * 86400;
+  const ninetyDaysAgo = now - 90 * 86400;
+
+  const queries: Record<BrowseList, string> = {
+    trending: `fields ${GAME_FIELDS}; where first_release_date > ${yearAgo} & first_release_date < ${now} & total_rating_count > 3 & cover != null; sort total_rating_count desc; limit ${limit};`,
+    top: `fields ${GAME_FIELDS}; where total_rating_count > 150 & cover != null; sort total_rating desc; limit ${limit};`,
+    new: `fields ${GAME_FIELDS}; where first_release_date > ${ninetyDaysAgo} & first_release_date < ${now} & cover != null; sort first_release_date desc; limit ${limit};`,
+    upcoming: `fields ${GAME_FIELDS}; where first_release_date > ${now} & hypes > 0 & cover != null; sort first_release_date asc; limit ${limit};`,
+  };
+
   try {
     const client = await createIGDBClient();
-
-    const response = await client.post(
-      '/games',
-      `fields id, name, cover.*, rating, first_release_date, platforms.*, genres.*; where rating > 70; sort rating desc; limit ${limit};`
-    );
-
+    const response = await client.post('/games', queries[list]);
     return response.data;
   } catch (error) {
-    console.error('Error fetching IGDB trending games:', error);
-    throw new Error('Failed to fetch trending games');
+    console.error(`Error fetching IGDB browse list "${list}":`, error);
+    throw new Error('Failed to fetch games');
   }
 }
 

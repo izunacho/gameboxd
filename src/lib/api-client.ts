@@ -56,18 +56,21 @@ export async function getGameDetails(gameId: number): Promise<IGDBGame | null> {
 }
 
 /**
- * Get trending games
- * Calls: GET /api/games/trending
+ * Get a curated browse list (trending, top, new, upcoming)
+ * Calls: GET /api/games/trending?list=...
  */
-export async function getTrendingGames(limit = 20): Promise<IGDBGame[]> {
+export async function getBrowseList(
+  list: 'trending' | 'top' | 'new' | 'upcoming',
+  limit = 20
+): Promise<IGDBGame[]> {
   try {
     const response = await apiClient.get('/games/trending', {
-      params: { limit },
+      params: { list, limit },
     });
 
     return response.data.data || [];
   } catch (error) {
-    console.error('Error fetching trending games:', error);
+    console.error('Error fetching browse list:', error);
     throw error;
   }
 }

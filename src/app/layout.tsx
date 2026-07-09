@@ -2,13 +2,14 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import Header from '@/components/Header';
 import UserDataLoader from '@/components/UserDataLoader';
+import PWARegister from '@/components/PWARegister';
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
   userScalable: true,
-  themeColor: '#00D084',
+  themeColor: '#0F0F0F',
 };
 
 export const metadata: Metadata = {
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
   description: 'Rate, review, and share your favorite video games. Discover what others are playing.',
   manifest: '/manifest.json',
   icons: {
-    icon: '/favicon.ico',
+    icon: '/favicon.png',
     apple: '/apple-touch-icon.png',
   },
   appleWebApp: {
@@ -43,6 +44,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Gameboxd" />
       </head>
       <body className="bg-dark-bg text-dark-text">
+        <PWARegister />
         <UserDataLoader />
         <Header />
         <main className="min-h-screen pb-20 md:pb-0">

@@ -1,13 +1,15 @@
 {
+  "id": "/",
   "name": "Gameboxd",
   "short_name": "Gameboxd",
-  "description": "A Letterboxd-inspired app for sharing and rating video games",
+  "description": "Rate, review, and share your favorite video games",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#0F0F0F",
-  "theme_color": "#00D084",
+  "theme_color": "#0F0F0F",
+  "categories": ["entertainment", "games"],
   "icons": [
     {
       "src": "/icon-192.png",
@@ -34,45 +36,20 @@
       "purpose": "maskable"
     }
   ],
-  "screenshots": [
-    {
-      "src": "/screenshot-540.png",
-      "sizes": "540x720",
-      "type": "image/png",
-      "form_factor": "narrow"
-    },
-    {
-      "src": "/screenshot-1280.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide"
-    }
-  ],
-  "categories": ["entertainment", "games"],
   "shortcuts": [
     {
-      "name": "Search Games",
-      "short_name": "Search",
-      "description": "Search for games",
-      "url": "/search?source=pwa",
-      "icons": [
-        {
-          "src": "/icon-192.png",
-          "sizes": "192x192"
-        }
-      ]
+      "name": "Explore Games",
+      "short_name": "Explore",
+      "description": "Search and discover games",
+      "url": "/explore",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "My Reviews",
-      "short_name": "Reviews",
-      "description": "View your game reviews",
-      "url": "/profile?source=pwa",
-      "icons": [
-        {
-          "src": "/icon-192.png",
-          "sizes": "192x192"
-        }
-      ]
+      "name": "My Profile",
+      "short_name": "Profile",
+      "description": "Your games and reviews",
+      "url": "/profile",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }

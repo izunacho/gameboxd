@@ -8,6 +8,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Heart, Bookmark, CheckCircle2, Star, User } from 'lucide-react';
 import { useAppStore, InteractionType } from '@/lib/store';
+import ReviewLikeButton from '@/components/ReviewLikeButton';
 import {
   submitReview,
   getGameReviews,
@@ -344,9 +345,16 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
                   </span>
                 </div>
                 {r.content && <p className="text-dark-text leading-relaxed">{r.content}</p>}
-                <p className="text-xs text-dark-text mt-3">
-                  {new Date(r.created_at).toLocaleDateString()}
-                </p>
+                <div className="flex items-center justify-between mt-3">
+                  <p className="text-xs text-dark-text">
+                    {new Date(r.created_at).toLocaleDateString()}
+                  </p>
+                  <ReviewLikeButton
+                    reviewId={r.id}
+                    initialLikes={r.likes}
+                    initialLiked={r.likedByMe}
+                  />
+                </div>
               </div>
             ))}
           </div>

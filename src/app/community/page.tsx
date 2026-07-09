@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Users, User, Star } from 'lucide-react';
 import { getCommunityFeed, FeedReview } from '@/lib/user-data';
+import ReviewLikeButton from '@/components/ReviewLikeButton';
 
 const PAGE_SIZE = 20;
 
@@ -158,6 +159,14 @@ export default function CommunityPage() {
                     {r.content}
                   </p>
                 )}
+
+                <div className="mt-3">
+                  <ReviewLikeButton
+                    reviewId={r.id}
+                    initialLikes={r.likes}
+                    initialLiked={r.likedByMe}
+                  />
+                </div>
               </div>
             </article>
           ))}

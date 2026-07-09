@@ -20,6 +20,8 @@ export interface CommunityReview {
   content: string | null;
   created_at: string;
   username: string;
+  likes: number;
+  likedByMe: boolean;
 }
 
 export interface LibraryGame {
@@ -90,7 +92,21 @@ export async function submitReview(game: IGDBGame, rating: number, content: stri
   if (error) throw error;
 }
 
-/** All community reviews for a game, newest first. */
+/** Which of these reviews has the current user liked? */
+async function getMyLikedReviewIds(reviewIds: string[]): Promise<Set<string>> {
+  if (reviewIds.length === 0) return new Set();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return new Set();
+
+  const { data } = await supabase
+    .from('review_likes')
+    .select('review_id')
+    .eq('user_id', auth.user.id)
+    .in('review_id', reviewIds);
+  return new Set((data || []).map((l: any) => l.review_id));
+}
+
+/** All community reviews for a game, newest first, with like counts. */
 export async function getGameReviews(igdbId: number): Promise<CommunityReview[]> {
   const { data: gameRow } = await supabase
     .from('games')
@@ -101,10 +117,12 @@ export async function getGameReviews(igdbId: number): Promise<CommunityReview[]>
 
   const { data, error } = await supabase
     .from('reviews')
-    .select('id, rating, content, created_at, users(username)')
+    .select('id, rating, content, created_at, users(username), review_likes(count)')
     .eq('game_id', gameRow.id)
     .order('created_at', { ascending: false });
   if (error) throw error;
+
+  const myLikes = await getMyLikedReviewIds((data || []).map((r: any) => r.id));
 
   return (data || []).map((r: any) => ({
     id: r.id,
@@ -112,7 +130,28 @@ export async function getGameReviews(igdbId: number): Promise<CommunityReview[]>
     content: r.content,
     created_at: r.created_at,
     username: r.users?.username || 'anonymous',
+    likes: r.review_likes?.[0]?.count ?? 0,
+    likedByMe: myLikes.has(r.id),
   }));
+}
+
+/** Like or unlike a review. Pass the current liked state. */
+export async function toggleReviewLike(reviewId: string, currentlyLiked: boolean) {
+  const user = await requireUser();
+
+  if (currentlyLiked) {
+    const { error } = await supabase
+      .from('review_likes')
+      .delete()
+      .eq('review_id', reviewId)
+      .eq('user_id', user.id);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase
+      .from('review_likes')
+      .insert({ review_id: reviewId, user_id: user.id });
+    if (error) throw error;
+  }
 }
 
 /** The current user's interactions (played/wishlist/liked), keyed by IGDB id. */
@@ -162,6 +201,8 @@ export interface FeedReview {
   created_at: string;
   username: string;
   game: LibraryGame;
+  likes: number;
+  likedByMe: boolean;
 }
 
 /**
@@ -173,11 +214,13 @@ export async function getCommunityFeed(page = 0, pageSize = 20): Promise<FeedRev
   const { data, error } = await supabase
     .from('reviews')
     .select(
-      'id, rating, content, created_at, users(username), games(igdb_id, name, background_image, released)'
+      'id, rating, content, created_at, users(username), games(igdb_id, name, background_image, released), review_likes(count)'
     )
     .order('created_at', { ascending: false })
     .range(from, from + pageSize - 1);
   if (error) throw error;
+
+  const myLikes = await getMyLikedReviewIds((data || []).map((r: any) => r.id));
 
   return (data || [])
     .filter((r: any) => r.games)
@@ -188,6 +231,8 @@ export async function getCommunityFeed(page = 0, pageSize = 20): Promise<FeedRev
       created_at: r.created_at,
       username: r.users?.username || 'anonymous',
       game: r.games,
+      likes: r.review_likes?.[0]?.count ?? 0,
+      likedByMe: myLikes.has(r.id),
     }));
 }
 

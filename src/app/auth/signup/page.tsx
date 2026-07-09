@@ -21,10 +21,15 @@ export default function SignUpPage() {
     setLoading(true);
 
     try {
-      // Sign up with Supabase
+      // Sign up with Supabase. The username travels in the user metadata;
+      // a database trigger (see supabase/migrations/002_auto_create_profile.sql)
+      // creates the profile row — client-side inserts are blocked by RLS.
       const { error: signUpError, data } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: { username },
+        },
       });
 
       if (signUpError) {
@@ -33,22 +38,10 @@ export default function SignUpPage() {
       }
 
       if (data.user) {
-        // Create user profile
-        const { error: profileError } = await supabase.from('users').insert({
-          id: data.user.id,
-          email,
-          username,
-        });
-
-        if (profileError) {
-          setError('Failed to create profile: ' + profileError.message);
-          return;
-        }
-
         setSuccess(true);
         setTimeout(() => {
           router.push('/auth/login');
-        }, 2000);
+        }, 3000);
       }
     } catch (err) {
       setError('An unexpected error occurred');
@@ -75,7 +68,7 @@ export default function SignUpPage() {
         {/* Success Message */}
         {success && (
           <div className="bg-green-500/10 border border-green-500/50 text-green-400 p-3 rounded-lg text-sm">
-            Account created! Redirecting to login...
+            Account created! Check your email to confirm it, then log in. Redirecting...
           </div>
         )}
 

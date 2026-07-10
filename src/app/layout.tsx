@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 import UserDataLoader from '@/components/UserDataLoader';
 import PWARegister from '@/components/PWARegister';
 
@@ -50,6 +51,7 @@ export default function RootLayout({
         <main className="min-h-screen pb-20 md:pb-0">
           {children}
         </main>
+        <Footer />
       </body>
     </html>
   );

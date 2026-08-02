@@ -5,6 +5,7 @@
 
 import { supabase } from './supabase';
 import { IGDBGame, getIGDBImageUrl } from './igdb';
+import { isPresetAvatar } from './avatars';
 
 export type InteractionType = 'played' | 'wishlist' | 'liked';
 
@@ -334,45 +335,16 @@ export async function getMyProfile(): Promise<MyProfile | null> {
   return data;
 }
 
-const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
-const AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-
-/**
- * Upload a new profile picture and point the user's row at it.
- * Returns the public URL. Older avatars for this user are removed.
- */
-export async function uploadAvatar(file: File): Promise<string> {
+/** Pick one of the preset avatars (or none). */
+export async function setMyAvatar(avatarUrl: string | null) {
   const user = await requireUser();
+  if (avatarUrl !== null && !isPresetAvatar(avatarUrl)) throw new Error('UNKNOWN_AVATAR');
 
-  if (!AVATAR_TYPES.includes(file.type)) throw new Error('INVALID_TYPE');
-  if (file.size > AVATAR_MAX_BYTES) throw new Error('TOO_LARGE');
-
-  const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-  const path = `${user.id}/${Date.now()}.${extension}`;
-
-  const { error: uploadError } = await supabase.storage
-    .from('avatars')
-    .upload(path, file, { cacheControl: '3600', upsert: false });
-  if (uploadError) throw uploadError;
-
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from('avatars').getPublicUrl(path);
-
-  const { error: updateError } = await supabase
+  const { error } = await supabase
     .from('users')
-    .update({ avatar_url: publicUrl })
+    .update({ avatar_url: avatarUrl })
     .eq('id', user.id);
-  if (updateError) throw updateError;
-
-  // Clean up any previous avatars so the folder doesn't grow forever
-  const { data: existing } = await supabase.storage.from('avatars').list(user.id);
-  const stale = (existing || [])
-    .filter((f) => `${user.id}/${f.name}` !== path)
-    .map((f) => `${user.id}/${f.name}`);
-  if (stale.length > 0) await supabase.storage.from('avatars').remove(stale);
-
-  return publicUrl;
+  if (error) throw error;
 }
 
 /** Update the editable parts of the current user's profile. */

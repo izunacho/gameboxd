@@ -1,21 +1,22 @@
 'use client';
 
-import { useRef, useState } from 'react';
-import { Camera, Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import { Check } from 'lucide-react';
 import Avatar from './Avatar';
-import { uploadAvatar, updateMyProfile } from '@/lib/user-data';
+import { AVATAR_PRESETS } from '@/lib/avatars';
+import { setMyAvatar, updateMyProfile } from '@/lib/user-data';
 
 interface ProfileEditorProps {
   avatarUrl: string | null;
   bio: string | null;
   username: string;
-  onSaved: (changes: { avatarUrl?: string; bio?: string | null }) => void;
+  onSaved: (changes: { avatarUrl?: string | null; bio?: string | null }) => void;
   onClose: () => void;
 }
 
 const BIO_MAX = 300;
 
-/** Panel for changing your profile picture and bio. */
+/** Panel for picking an avatar and editing your bio. */
 export default function ProfileEditor({
   avatarUrl,
   bio,
@@ -23,38 +24,30 @@ export default function ProfileEditor({
   onSaved,
   onClose,
 }: ProfileEditorProps) {
-  const fileInput = useRef<HTMLInputElement>(null);
-  const [preview, setPreview] = useState(avatarUrl);
+  const [selected, setSelected] = useState(avatarUrl);
   const [bioText, setBioText] = useState(bio || '');
-  const [uploading, setUploading] = useState(false);
+  const [savingAvatar, setSavingAvatar] = useState(false);
   const [savingBio, setSavingBio] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handlePick = async (url: string | null) => {
+    if (savingAvatar || url === selected) return;
+    const previous = selected;
+    setSelected(url);
     setError(null);
     setSaved(false);
-    setUploading(true);
+    setSavingAvatar(true);
     try {
-      const url = await uploadAvatar(file);
-      setPreview(url);
+      await setMyAvatar(url);
       onSaved({ avatarUrl: url });
       setSaved(true);
-    } catch (err: any) {
-      if (err?.message === 'INVALID_TYPE') {
-        setError('Pick a JPG, PNG, WebP or GIF image.');
-      } else if (err?.message === 'TOO_LARGE') {
-        setError('That image is over 2 MB. Try a smaller one.');
-      } else {
-        setError("Couldn't upload that picture. Try again.");
-        console.error('Avatar upload failed:', err);
-      }
+    } catch (err) {
+      setSelected(previous);
+      setError("Couldn't save that avatar. Try again.");
+      console.error('Avatar update failed:', err);
     } finally {
-      setUploading(false);
-      // Allow picking the same file again after an error
-      if (fileInput.current) fileInput.current.value = '';
+      setSavingAvatar(false);
     }
   };
 
@@ -83,36 +76,62 @@ export default function ProfileEditor({
         </button>
       </div>
 
-      {/* Profile picture */}
-      <div className="flex items-center gap-4">
-        <Avatar url={preview} username={username} size="lg" />
-        <div>
-          <input
-            ref={fileInput}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
-            onChange={handleFile}
-            className="hidden"
-          />
-          <button
-            onClick={() => fileInput.current?.click()}
-            disabled={uploading}
-            className="btn-secondary flex items-center gap-2 disabled:opacity-50"
-          >
-            {uploading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Camera className="w-4 h-4" />
-            )}
-            {uploading ? 'Uploading...' : preview ? 'Change picture' : 'Add a picture'}
-          </button>
-          <p className="text-xs text-dark-text mt-2">JPG, PNG, WebP or GIF, up to 2 MB.</p>
+      {/* Avatar picker */}
+      <div>
+        <div className="flex items-center gap-4 mb-4">
+          <Avatar url={selected} username={username} size="lg" />
+          <div>
+            <p className="font-medium">Your avatar</p>
+            <p className="text-sm text-dark-text">Pick one — it saves as soon as you choose.</p>
+          </div>
         </div>
+
+        <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
+          {AVATAR_PRESETS.map((preset) => {
+            const isSelected = selected === preset.url;
+            return (
+              <button
+                key={preset.id}
+                onClick={() => handlePick(preset.url)}
+                disabled={savingAvatar}
+                title={preset.label}
+                aria-label={preset.label}
+                aria-pressed={isSelected}
+                className={`relative rounded-lg p-1 border-2 transition-colors disabled:opacity-50 ${
+                  isSelected ? 'border-primary' : 'border-transparent hover:border-dark-border'
+                }`}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={preset.url}
+                  alt=""
+                  className="w-full aspect-square rounded-md bg-dark-bg"
+                  style={{ imageRendering: 'pixelated' }}
+                />
+                {isSelected && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-primary text-black rounded-full p-0.5">
+                    <Check className="w-3 h-3" />
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {selected && (
+          <button
+            onClick={() => handlePick(null)}
+            disabled={savingAvatar}
+            className="text-sm text-dark-text hover:text-primary mt-3 disabled:opacity-50"
+          >
+            Remove avatar
+          </button>
+        )}
       </div>
 
       {/* Bio */}
-      <div>
-        <label htmlFor="bio" className="block text-sm font-medium mb-2">
+      <div className="pt-2 border-t border-dark-border">
+        <label htmlFor="bio" className="block text-sm font-medium mb-2 mt-4">
           Bio
         </label>
         <textarea

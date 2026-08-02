@@ -7,8 +7,10 @@ import { supabase } from '@/lib/supabase';
 import { getPublicProfile, PublicProfile } from '@/lib/user-data';
 import { getFollowStatus, getFollowCounts, getBlockStatus, FollowCounts } from '@/lib/social-data';
 import GameTile from '@/components/GameTile';
+import Avatar from '@/components/Avatar';
 import ProfileActionsMenu from '@/components/ProfileActionsMenu';
-import { User, CheckCircle2, Bookmark, Heart, Star, UserX } from 'lucide-react';
+import CollapsibleSection from '@/components/CollapsibleSection';
+import { CheckCircle2, Bookmark, Heart, Star, UserX } from 'lucide-react';
 
 interface PublicProfileClientProps {
   username: string;
@@ -100,12 +102,10 @@ export default function PublicProfileClient({ username }: PublicProfileClientPro
   const liked = library.interactions.filter((i) => i.type === 'liked');
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 space-y-12">
+    <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
       {/* Profile Header */}
-      <div className="card p-6 flex items-center gap-4">
-        <div className="bg-primary/20 p-4 rounded-full">
-          <User className="w-10 h-10 text-primary" />
-        </div>
+      <div className="card p-6 flex items-start gap-4">
+        <Avatar url={profile.avatar_url} username={profile.username} size="lg" />
         <div className="flex-grow min-w-0">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <h1 className="text-3xl font-bold">{profile.username}</h1>
@@ -142,17 +142,15 @@ export default function PublicProfileClient({ username }: PublicProfileClientPro
       </div>
 
       {/* Reviews */}
-      <section>
-        <h2 className="flex items-center gap-2 text-2xl font-bold mb-6">
-          <Star className="w-6 h-6 text-primary" />
-          Reviews
-        </h2>
-        {library.reviews.length === 0 ? (
-          <p className="text-dark-text">No reviews written yet.</p>
-        ) : (
-          <div className="space-y-4">
-            {library.reviews.map((r) => (
-              <div key={r.id} className="card p-5 flex gap-4">
+      <CollapsibleSection
+        title="Reviews"
+        count={library.reviews.length}
+        icon={Star}
+        emptyLabel="No reviews written yet."
+      >
+        <div className="space-y-4 pt-4">
+          {library.reviews.map((r) => (
+              <div key={r.id} className="flex gap-4">
                 <Link href={`/game/${r.game.igdb_id}`} className="shrink-0">
                   <div className="relative w-16 h-20 rounded overflow-hidden bg-dark-bg">
                     {r.game.background_image && (
@@ -186,60 +184,50 @@ export default function PublicProfileClient({ username }: PublicProfileClientPro
                 </div>
               </div>
             ))}
-          </div>
-        )}
-      </section>
+        </div>
+      </CollapsibleSection>
 
       {/* Played */}
-      <section>
-        <h2 className="flex items-center gap-2 text-2xl font-bold mb-6">
-          <CheckCircle2 className="w-6 h-6 text-primary" />
-          Played ({played.length})
-        </h2>
-        {played.length === 0 ? (
-          <p className="text-dark-text">No games marked as played.</p>
-        ) : (
-          <div className="game-grid">
-            {played.map((i) => (
-              <GameTile key={i.id} game={i.game} />
-            ))}
-          </div>
-        )}
-      </section>
+      <CollapsibleSection
+        title="Played"
+        count={played.length}
+        icon={CheckCircle2}
+        emptyLabel="No games marked as played."
+      >
+        <div className="game-grid pt-4">
+          {played.map((i) => (
+            <GameTile key={i.id} game={i.game} />
+          ))}
+        </div>
+      </CollapsibleSection>
 
       {/* Wishlist */}
-      <section>
-        <h2 className="flex items-center gap-2 text-2xl font-bold mb-6">
-          <Bookmark className="w-6 h-6 text-primary" />
-          Wishlist ({wishlist.length})
-        </h2>
-        {wishlist.length === 0 ? (
-          <p className="text-dark-text">Wishlist is empty.</p>
-        ) : (
-          <div className="game-grid">
-            {wishlist.map((i) => (
-              <GameTile key={i.id} game={i.game} />
-            ))}
-          </div>
-        )}
-      </section>
+      <CollapsibleSection
+        title="Wishlist"
+        count={wishlist.length}
+        icon={Bookmark}
+        emptyLabel="Wishlist is empty."
+      >
+        <div className="game-grid pt-4">
+          {wishlist.map((i) => (
+            <GameTile key={i.id} game={i.game} />
+          ))}
+        </div>
+      </CollapsibleSection>
 
       {/* Liked */}
-      <section>
-        <h2 className="flex items-center gap-2 text-2xl font-bold mb-6">
-          <Heart className="w-6 h-6 text-primary" />
-          Liked ({liked.length})
-        </h2>
-        {liked.length === 0 ? (
-          <p className="text-dark-text">No liked games.</p>
-        ) : (
-          <div className="game-grid">
-            {liked.map((i) => (
-              <GameTile key={i.id} game={i.game} />
-            ))}
-          </div>
-        )}
-      </section>
+      <CollapsibleSection
+        title="Liked"
+        count={liked.length}
+        icon={Heart}
+        emptyLabel="No liked games."
+      >
+        <div className="game-grid pt-4">
+          {liked.map((i) => (
+            <GameTile key={i.id} game={i.game} />
+          ))}
+        </div>
+      </CollapsibleSection>
     </div>
   );
 }

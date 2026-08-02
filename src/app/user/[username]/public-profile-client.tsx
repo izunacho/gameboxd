@@ -107,8 +107,10 @@ export default function PublicProfileClient({ username }: PublicProfileClientPro
       <div className="card p-6 flex items-start gap-4">
         <Avatar url={profile.avatar_url} username={profile.username} size="lg" />
         <div className="flex-grow min-w-0">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <h1 className="text-3xl font-bold">{profile.username}</h1>
+          <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+            <h1 className="text-2xl sm:text-3xl font-bold min-w-0 break-words">
+              {profile.username}
+            </h1>
             {viewerChecked && viewerId && viewerId !== profile.id && (
               <ProfileActionsMenu
                 targetUserId={profile.id}
@@ -130,8 +132,11 @@ export default function PublicProfileClient({ username }: PublicProfileClientPro
             {library.reviews.length} review(s)
           </p>
           <p className="text-dark-text text-sm mt-1">
-            <Link href={`/user/${encodeURIComponent(profile.username)}/followers`} className="hover:text-primary hover:underline">
-              {followCounts.followers} followers
+            <Link
+              href={`/user/${encodeURIComponent(profile.username)}/followers`}
+              className="hover:text-primary hover:underline"
+            >
+              {followCounts.followers} {followCounts.followers === 1 ? 'follower' : 'followers'}
             </Link>{' '}
             ·{' '}
             <Link href={`/user/${encodeURIComponent(profile.username)}/following`} className="hover:text-primary hover:underline">

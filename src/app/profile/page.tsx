@@ -102,8 +102,8 @@ export default function ProfilePage() {
       <div className="card p-6 flex items-start gap-4">
         <Avatar url={profile?.avatar_url ?? null} username={displayName} size="lg" />
         <div className="flex-grow min-w-0">
-          <div className="flex items-start justify-between gap-4">
-            <h1 className="text-3xl font-bold">{displayName}</h1>
+          <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+            <h1 className="text-2xl sm:text-3xl font-bold min-w-0 break-words">{displayName}</h1>
             <button
               onClick={() => setEditing((v) => !v)}
               className="btn-secondary text-sm flex items-center gap-1.5 shrink-0"
@@ -120,7 +120,7 @@ export default function ProfilePage() {
           </p>
           <p className="text-dark-text text-sm mt-1">
             <Link href="/profile/followers" className="hover:text-primary hover:underline">
-              {followCounts.followers} followers
+              {followCounts.followers} {followCounts.followers === 1 ? 'follower' : 'followers'}
             </Link>{' '}
             ·{' '}
             <Link href="/profile/following" className="hover:text-primary hover:underline">

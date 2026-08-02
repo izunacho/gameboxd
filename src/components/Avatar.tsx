@@ -1,13 +1,16 @@
-import Image from 'next/image';
 import { User } from 'lucide-react';
 
 const SIZES = {
-  sm: { box: 'w-9 h-9', icon: 'w-5 h-5', px: 36 },
-  md: { box: 'w-14 h-14', icon: 'w-7 h-7', px: 56 },
-  lg: { box: 'w-20 h-20', icon: 'w-10 h-10', px: 80 },
+  sm: { box: 'w-9 h-9', icon: 'w-5 h-5' },
+  md: { box: 'w-14 h-14', icon: 'w-7 h-7' },
+  lg: { box: 'w-20 h-20', icon: 'w-10 h-10' },
 };
 
-/** Profile picture, falling back to a placeholder icon when there is none. */
+/**
+ * Profile picture, falling back to a placeholder icon when none is set.
+ * Avatars are preset pixel-art sprites served from /public/avatars, so they
+ * render as plain images — no remote hosts and no image optimization needed.
+ */
 export default function Avatar({
   url,
   username,
@@ -17,7 +20,7 @@ export default function Avatar({
   username?: string;
   size?: keyof typeof SIZES;
 }) {
-  const { box, icon, px } = SIZES[size];
+  const { box, icon } = SIZES[size];
 
   if (!url) {
     return (
@@ -28,14 +31,12 @@ export default function Avatar({
   }
 
   return (
-    <div className={`${box} relative rounded-full overflow-hidden bg-dark-bg shrink-0`}>
-      <Image
-        src={url}
-        alt={username ? `${username}'s profile picture` : 'Profile picture'}
-        width={px}
-        height={px}
-        className="w-full h-full object-cover"
-      />
-    </div>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={url}
+      alt={username ? `${username}'s avatar` : 'Avatar'}
+      className={`${box} rounded-full object-cover shrink-0 bg-dark-bg`}
+      style={{ imageRendering: 'pixelated' }}
+    />
   );
 }

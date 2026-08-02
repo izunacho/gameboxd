@@ -58,12 +58,12 @@ export default function ProfilePage() {
     }
   };
 
-  const handleProfileSaved = (changes: { avatarUrl?: string; bio?: string | null }) => {
+  const handleProfileSaved = (changes: { avatarUrl?: string | null; bio?: string | null }) => {
     setProfile((prev) =>
       prev
         ? {
             ...prev,
-            avatar_url: changes.avatarUrl ?? prev.avatar_url,
+            avatar_url: changes.avatarUrl !== undefined ? changes.avatarUrl : prev.avatar_url,
             bio: changes.bio !== undefined ? changes.bio : prev.bio,
           }
         : prev

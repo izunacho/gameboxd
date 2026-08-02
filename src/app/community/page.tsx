@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Users, User, Star } from 'lucide-react';
 import { getCommunityFeed, FeedReview } from '@/lib/user-data';
 import ReviewLikeButton from '@/components/ReviewLikeButton';
+import UserSearch from '@/components/UserSearch';
 
 const PAGE_SIZE = 20;
 
@@ -71,6 +72,9 @@ export default function CommunityPage() {
         <h1 className="text-4xl font-bold">Community</h1>
       </div>
       <p className="text-dark-text mb-10">The latest reviews from Hitboxd players.</p>
+
+      {/* Player search */}
+      <UserSearch />
 
       {/* Error */}
       {error && (

@@ -26,6 +26,7 @@ export default function ProfileActionsMenu({
   const [blocked, setBlocked] = useState(initialBlocked);
   const [menuOpen, setMenuOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleToggleBlock = async () => {
     const wasBlocked = blocked;
@@ -36,6 +37,7 @@ export default function ProfileActionsMenu({
 
     setMenuOpen(false);
     setBusy(true);
+    setErrorMsg(null);
     try {
       await toggleBlock(targetUserId, wasBlocked);
       setBlocked(!wasBlocked);
@@ -47,6 +49,7 @@ export default function ProfileActionsMenu({
       if (err?.message === 'NOT_LOGGED_IN') {
         router.push('/auth/login');
       } else {
+        setErrorMsg("Couldn't update block. Try again.");
         console.error('Failed to toggle block:', err);
       }
     } finally {
@@ -56,6 +59,7 @@ export default function ProfileActionsMenu({
 
   return (
     <div className="flex items-center gap-2">
+      {errorMsg && <p className="text-xs text-red-400">{errorMsg}</p>}
       {!blocked && <FollowButton targetUserId={targetUserId} initialFollowing={initialFollowing} />}
 
       <div className="relative">

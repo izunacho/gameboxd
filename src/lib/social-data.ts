@@ -88,6 +88,24 @@ export async function getFollowingList(userId: string): Promise<SocialUser[]> {
     .filter((u: SocialUser | null): u is SocialUser => !!u);
 }
 
+/** Search players by username (case-insensitive substring). Blocked users are excluded via RLS. */
+export async function searchUsers(query: string): Promise<SocialUser[]> {
+  const cleaned = query.trim();
+  if (cleaned.length < 2) return [];
+
+  // Escape LIKE pattern wildcards so user input matches literally
+  const escaped = cleaned.replace(/[\\%_]/g, (c) => `\\${c}`);
+
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, username, avatar_url')
+    .ilike('username', `%${escaped}%`)
+    .order('username')
+    .limit(10);
+  if (error) throw error;
+  return data || [];
+}
+
 export interface BlockStatus {
   blockedByMe: boolean;
   blockedMe: boolean;

@@ -10,7 +10,7 @@
  *  - Game cover images (IGDB CDN + next/image): cache first with a size cap.
  */
 
-const VERSION = 'hitboxd-v3';
+const VERSION = 'hitboxd-v4';
 const STATIC_CACHE = `${VERSION}-static`;
 const IMAGE_CACHE = `${VERSION}-images`;
 const OFFLINE_URL = '/offline.html';
@@ -106,4 +106,43 @@ self.addEventListener('fetch', (event) => {
       })
     );
   }
+});
+
+// ---- Web Push ----
+// Payload: { title, body, url } — sent by /api/push/notify.
+
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (_) {
+    // Non-JSON payload — show a generic notification
+  }
+  const title = data.title || 'Hitboxd';
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: data.body || 'You have a new notification',
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      data: { url: data.url || '/' },
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || '/';
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
+      .then((windowClients) => {
+        for (const client of windowClients) {
+          if ('focus' in client) {
+            client.navigate(url);
+            return client.focus();
+          }
+        }
+        return self.clients.openWindow(url);
+      })
+  );
 });

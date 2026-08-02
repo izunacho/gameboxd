@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Bell } from 'lucide-react';
+import { Bell, BellRing } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import {
   getUnreadNotificationCount,
@@ -10,6 +10,7 @@ import {
   markAllNotificationsRead,
   AppNotification,
 } from '@/lib/notifications-data';
+import { getPushStatus, enablePush, disablePush, PushStatus } from '@/lib/push';
 
 /** Bell icon with unread badge and a dropdown of recent notifications. */
 export default function NotificationBell() {
@@ -17,6 +18,9 @@ export default function NotificationBell() {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [pushStatus, setPushStatus] = useState<PushStatus | null>(null);
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushError, setPushError] = useState<string | null>(null);
 
   const refreshCount = () => {
     getUnreadNotificationCount()
@@ -39,6 +43,35 @@ export default function NotificationBell() {
         .then(setNotifications)
         .catch((err) => console.error('Failed to load notifications:', err))
         .finally(() => setLoading(false));
+      getPushStatus()
+        .then(setPushStatus)
+        .catch(() => setPushStatus('unsupported'));
+    }
+  };
+
+  const handleTogglePush = async () => {
+    if (pushBusy) return;
+    setPushBusy(true);
+    setPushError(null);
+    try {
+      if (pushStatus === 'subscribed') {
+        await disablePush();
+        setPushStatus('unsubscribed');
+      } else {
+        await enablePush();
+        setPushStatus('subscribed');
+      }
+    } catch (err: any) {
+      if (err?.message === 'PERMISSION_DENIED') {
+        setPushStatus('denied');
+      } else if (err?.message === 'SW_NOT_READY') {
+        setPushError('Push alerts only work in the deployed app.');
+      } else {
+        setPushError("Couldn't update push alerts. Try again.");
+        console.error('Failed to toggle push:', err);
+      }
+    } finally {
+      setPushBusy(false);
     }
   };
 
@@ -76,6 +109,37 @@ export default function NotificationBell() {
                 Mark all read
               </button>
             )}
+          </div>
+
+          {/* Push alerts toggle */}
+          <div className="px-2 py-2 border-b border-dark-border mb-1">
+            {pushStatus === 'unsupported' && (
+              <p className="text-xs text-dark-text">
+                Push alerts aren't available here. On iPhone, add Hitboxd to your Home Screen
+                (Share → Add to Home Screen) and enable them from the installed app.
+              </p>
+            )}
+            {pushStatus === 'denied' && (
+              <p className="text-xs text-dark-text">
+                Notifications are blocked for this site — allow them in your browser settings to
+                get push alerts.
+              </p>
+            )}
+            {(pushStatus === 'subscribed' || pushStatus === 'unsubscribed') && (
+              <button
+                onClick={handleTogglePush}
+                disabled={pushBusy}
+                className="flex items-center gap-2 text-xs text-primary hover:underline disabled:opacity-50"
+              >
+                <BellRing className="w-3.5 h-3.5" />
+                {pushBusy
+                  ? 'Updating...'
+                  : pushStatus === 'subscribed'
+                    ? 'Push alerts on — turn off for this device'
+                    : 'Enable push alerts on this device'}
+              </button>
+            )}
+            {pushError && <p className="text-xs text-red-400 mt-1">{pushError}</p>}
           </div>
           {loading && (
             <p className="text-sm text-dark-text px-2 py-3">Loading...</p>

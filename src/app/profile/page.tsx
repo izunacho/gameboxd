@@ -4,16 +4,21 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import { loadMyLibrary, deleteReview, MyLibrary } from '@/lib/user-data';
+import { loadMyLibrary, deleteReview, getMyProfile, MyLibrary, MyProfile } from '@/lib/user-data';
 import { getFollowCounts, FollowCounts } from '@/lib/social-data';
 import GameTile from '@/components/GameTile';
-import { User, CheckCircle2, Bookmark, Heart, Star } from 'lucide-react';
+import Avatar from '@/components/Avatar';
+import ProfileEditor from '@/components/ProfileEditor';
+import CollapsibleSection from '@/components/CollapsibleSection';
+import { User, CheckCircle2, Bookmark, Heart, Star, Pencil } from 'lucide-react';
 
 export default function ProfilePage() {
   const [username, setUsername] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
+  const [profile, setProfile] = useState<MyProfile | null>(null);
   const [library, setLibrary] = useState<MyLibrary>({ interactions: [], reviews: [] });
   const [followCounts, setFollowCounts] = useState<FollowCounts>({ followers: 0, following: 0 });
+  const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [notLoggedIn, setNotLoggedIn] = useState(false);
 
@@ -27,6 +32,7 @@ export default function ProfilePage() {
         }
         setUsername(data.user.user_metadata?.username || null);
         setEmail(data.user.email || null);
+        setProfile(await getMyProfile());
         setLibrary(await loadMyLibrary());
         setFollowCounts(await getFollowCounts(data.user.id));
       } catch (err) {
@@ -50,6 +56,18 @@ export default function ProfilePage() {
     } catch (err) {
       console.error('Failed to delete review:', err);
     }
+  };
+
+  const handleProfileSaved = (changes: { avatarUrl?: string; bio?: string | null }) => {
+    setProfile((prev) =>
+      prev
+        ? {
+            ...prev,
+            avatar_url: changes.avatarUrl ?? prev.avatar_url,
+            bio: changes.bio !== undefined ? changes.bio : prev.bio,
+          }
+        : prev
+    );
   };
 
   if (loading && !notLoggedIn) {
@@ -76,17 +94,26 @@ export default function ProfilePage() {
   const played = library.interactions.filter((i) => i.type === 'played');
   const wishlist = library.interactions.filter((i) => i.type === 'wishlist');
   const liked = library.interactions.filter((i) => i.type === 'liked');
+  const displayName = profile?.username || username || 'Player';
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 space-y-12">
+    <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
       {/* Profile Header */}
-      <div className="card p-6 flex items-center gap-4">
-        <div className="bg-primary/20 p-4 rounded-full">
-          <User className="w-10 h-10 text-primary" />
-        </div>
-        <div>
-          <h1 className="text-3xl font-bold">{username || 'Player'}</h1>
-          {email && <p className="text-dark-text text-sm">{email}</p>}
+      <div className="card p-6 flex items-start gap-4">
+        <Avatar url={profile?.avatar_url ?? null} username={displayName} size="lg" />
+        <div className="flex-grow min-w-0">
+          <div className="flex items-start justify-between gap-4">
+            <h1 className="text-3xl font-bold">{displayName}</h1>
+            <button
+              onClick={() => setEditing((v) => !v)}
+              className="btn-secondary text-sm flex items-center gap-1.5 shrink-0"
+            >
+              <Pencil className="w-4 h-4" />
+              Edit profile
+            </button>
+          </div>
+          {profile?.bio && <p className="text-dark-text mt-1">{profile.bio}</p>}
+          {email && <p className="text-dark-text text-sm mt-1">{email}</p>}
           <p className="text-dark-text text-sm mt-1">
             {played.length} played · {wishlist.length} wishlisted · {liked.length} liked ·{' '}
             {library.reviews.length} review(s)
@@ -103,127 +130,123 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      {editing && (
+        <ProfileEditor
+          avatarUrl={profile?.avatar_url ?? null}
+          bio={profile?.bio ?? null}
+          username={displayName}
+          onSaved={handleProfileSaved}
+          onClose={() => setEditing(false)}
+        />
+      )}
+
       {/* My Reviews */}
-      <section>
-        <h2 className="flex items-center gap-2 text-2xl font-bold mb-6">
-          <Star className="w-6 h-6 text-primary" />
-          My Reviews
-        </h2>
-        {library.reviews.length === 0 ? (
-          <div className="card p-6 text-center text-dark-text">
-            <p>
-              You haven't reviewed any games yet.{' '}
-              <Link href="/explore" className="text-primary hover:underline">
-                Find one to rate!
-              </Link>
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {library.reviews.map((r) => (
-              <div key={r.id} className="card p-5 flex gap-4">
-                <Link href={`/game/${r.game.igdb_id}`} className="shrink-0">
-                  <div className="relative w-16 h-20 rounded overflow-hidden bg-dark-bg">
-                    {r.game.background_image && (
-                      <Image
-                        src={r.game.background_image}
-                        alt={r.game.name}
-                        fill
-                        className="object-cover"
-                      />
-                    )}
-                  </div>
-                </Link>
-                <div className="flex-grow min-w-0">
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <Link
-                      href={`/game/${r.game.igdb_id}`}
-                      className="font-semibold hover:text-primary truncate"
-                    >
-                      {r.game.name}
-                    </Link>
-                    <span className="bg-primary text-black font-bold px-2 py-0.5 rounded text-sm shrink-0">
-                      {r.rating}/100
-                    </span>
-                  </div>
-                  {r.content && (
-                    <p className="text-dark-text text-sm line-clamp-3">{r.content}</p>
+      <CollapsibleSection
+        title="My Reviews"
+        count={library.reviews.length}
+        icon={Star}
+        emptyLabel={
+          <>
+            You haven't reviewed any games yet.{' '}
+            <Link href="/explore" className="text-primary hover:underline">
+              Find one to rate!
+            </Link>
+          </>
+        }
+      >
+        <div className="space-y-4 pt-4">
+          {library.reviews.map((r) => (
+            <div key={r.id} className="flex gap-4">
+              <Link href={`/game/${r.game.igdb_id}`} className="shrink-0">
+                <div className="relative w-16 h-20 rounded overflow-hidden bg-dark-bg">
+                  {r.game.background_image && (
+                    <Image
+                      src={r.game.background_image}
+                      alt={r.game.name}
+                      fill
+                      className="object-cover"
+                    />
                   )}
-                  <div className="flex items-center gap-3 mt-2">
-                    <p className="text-xs text-dark-text">
-                      {new Date(r.created_at).toLocaleDateString()}
-                    </p>
-                    <Link
-                      href={`/game/${r.game.igdb_id}`}
-                      className="text-xs text-primary hover:underline"
-                    >
-                      Edit
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteReview(r.id)}
-                      className="text-xs text-red-400 hover:underline"
-                    >
-                      Delete
-                    </button>
-                  </div>
+                </div>
+              </Link>
+              <div className="flex-grow min-w-0">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <Link
+                    href={`/game/${r.game.igdb_id}`}
+                    className="font-semibold hover:text-primary truncate"
+                  >
+                    {r.game.name}
+                  </Link>
+                  <span className="bg-primary text-black font-bold px-2 py-0.5 rounded text-sm shrink-0">
+                    {r.rating}/100
+                  </span>
+                </div>
+                {r.content && <p className="text-dark-text text-sm line-clamp-3">{r.content}</p>}
+                <div className="flex items-center gap-3 mt-2">
+                  <p className="text-xs text-dark-text">
+                    {new Date(r.created_at).toLocaleDateString()}
+                  </p>
+                  <Link
+                    href={`/game/${r.game.igdb_id}`}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Edit
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteReview(r.id)}
+                    className="text-xs text-red-400 hover:underline"
+                  >
+                    Delete
+                  </button>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </section>
+            </div>
+          ))}
+        </div>
+      </CollapsibleSection>
 
       {/* Played */}
-      <section>
-        <h2 className="flex items-center gap-2 text-2xl font-bold mb-6">
-          <CheckCircle2 className="w-6 h-6 text-primary" />
-          Played ({played.length})
-        </h2>
-        {played.length === 0 ? (
-          <p className="text-dark-text">No games marked as played yet.</p>
-        ) : (
-          <div className="game-grid">
-            {played.map((i) => (
-              <GameTile key={i.id} game={i.game} />
-            ))}
-          </div>
-        )}
-      </section>
+      <CollapsibleSection
+        title="Played"
+        count={played.length}
+        icon={CheckCircle2}
+        emptyLabel="No games marked as played yet."
+      >
+        <div className="game-grid pt-4">
+          {played.map((i) => (
+            <GameTile key={i.id} game={i.game} />
+          ))}
+        </div>
+      </CollapsibleSection>
 
       {/* Wishlist */}
-      <section>
-        <h2 className="flex items-center gap-2 text-2xl font-bold mb-6">
-          <Bookmark className="w-6 h-6 text-primary" />
-          Wishlist ({wishlist.length})
-        </h2>
-        {wishlist.length === 0 ? (
-          <p className="text-dark-text">Your wishlist is empty.</p>
-        ) : (
-          <div className="game-grid">
-            {wishlist.map((i) => (
-              <GameTile key={i.id} game={i.game} />
-            ))}
-          </div>
-        )}
-      </section>
+      <CollapsibleSection
+        title="Wishlist"
+        count={wishlist.length}
+        icon={Bookmark}
+        emptyLabel="Your wishlist is empty."
+      >
+        <div className="game-grid pt-4">
+          {wishlist.map((i) => (
+            <GameTile key={i.id} game={i.game} />
+          ))}
+        </div>
+      </CollapsibleSection>
 
       {/* Liked */}
-      <section>
-        <h2 className="flex items-center gap-2 text-2xl font-bold mb-6">
-          <Heart className="w-6 h-6 text-primary" />
-          Liked ({liked.length})
-        </h2>
-        {liked.length === 0 ? (
-          <p className="text-dark-text">You haven't liked any games yet.</p>
-        ) : (
-          <div className="game-grid">
-            {liked.map((i) => (
-              <GameTile key={i.id} game={i.game} />
-            ))}
-          </div>
-        )}
-      </section>
+      <CollapsibleSection
+        title="Liked"
+        count={liked.length}
+        icon={Heart}
+        emptyLabel="You haven't liked any games yet."
+      >
+        <div className="game-grid pt-4">
+          {liked.map((i) => (
+            <GameTile key={i.id} game={i.game} />
+          ))}
+        </div>
+      </CollapsibleSection>
     </div>
   );
 }

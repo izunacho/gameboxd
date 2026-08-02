@@ -308,8 +308,81 @@ export interface PublicProfile {
   id: string;
   username: string;
   bio: string | null;
+  avatar_url: string | null;
   created_at: string;
   library: MyLibrary;
+}
+
+export interface MyProfile {
+  id: string;
+  username: string;
+  bio: string | null;
+  avatar_url: string | null;
+}
+
+/** The logged-in user's own profile row. Null when logged out. */
+export async function getMyProfile(): Promise<MyProfile | null> {
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return null;
+
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, username, bio, avatar_url')
+    .eq('id', auth.user.id)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
+const AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+/**
+ * Upload a new profile picture and point the user's row at it.
+ * Returns the public URL. Older avatars for this user are removed.
+ */
+export async function uploadAvatar(file: File): Promise<string> {
+  const user = await requireUser();
+
+  if (!AVATAR_TYPES.includes(file.type)) throw new Error('INVALID_TYPE');
+  if (file.size > AVATAR_MAX_BYTES) throw new Error('TOO_LARGE');
+
+  const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+  const path = `${user.id}/${Date.now()}.${extension}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from('avatars')
+    .upload(path, file, { cacheControl: '3600', upsert: false });
+  if (uploadError) throw uploadError;
+
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from('avatars').getPublicUrl(path);
+
+  const { error: updateError } = await supabase
+    .from('users')
+    .update({ avatar_url: publicUrl })
+    .eq('id', user.id);
+  if (updateError) throw updateError;
+
+  // Clean up any previous avatars so the folder doesn't grow forever
+  const { data: existing } = await supabase.storage.from('avatars').list(user.id);
+  const stale = (existing || [])
+    .filter((f) => `${user.id}/${f.name}` !== path)
+    .map((f) => `${user.id}/${f.name}`);
+  if (stale.length > 0) await supabase.storage.from('avatars').remove(stale);
+
+  return publicUrl;
+}
+
+/** Update the editable parts of the current user's profile. */
+export async function updateMyProfile(fields: { bio?: string | null }) {
+  const user = await requireUser();
+  const { error } = await supabase
+    .from('users')
+    .update({ bio: fields.bio?.trim() || null })
+    .eq('id', user.id);
+  if (error) throw error;
 }
 
 /** Look up a user's id by username, for pages that don't need the full profile/library. */
@@ -329,7 +402,7 @@ export async function getUserIdByUsername(
 export async function getPublicProfile(username: string): Promise<PublicProfile | null> {
   const { data: user, error } = await supabase
     .from('users')
-    .select('id, username, bio, created_at')
+    .select('id, username, bio, avatar_url, created_at')
     .eq('username', username)
     .maybeSingle();
   if (error) throw error;
@@ -339,6 +412,7 @@ export async function getPublicProfile(username: string): Promise<PublicProfile 
     id: user.id,
     username: user.username,
     bio: user.bio,
+    avatar_url: user.avatar_url,
     created_at: user.created_at,
     library: await fetchLibraryFor(user.id),
   };

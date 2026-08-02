@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Heart, Gamepad2 } from 'lucide-react';
+import { Heart, Gamepad2, Download } from 'lucide-react';
 
 const PATREON_URL = 'https://www.patreon.com/cw/hitboxd';
 
@@ -13,6 +13,13 @@ export default function Footer() {
         </div>
 
         <div className="flex items-center gap-6 text-sm">
+          <Link
+            href="/install"
+            className="flex items-center gap-1.5 text-dark-text hover:text-primary transition"
+          >
+            <Download className="w-4 h-4" />
+            Get the App
+          </Link>
           <Link href="/privacy" className="text-dark-text hover:text-primary transition">
             Privacy Policy
           </Link>

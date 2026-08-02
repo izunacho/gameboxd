@@ -2,12 +2,18 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { Gamepad2, TrendingUp, Users } from 'lucide-react';
+import { Gamepad2, TrendingUp, Users, Download } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { isStandalone } from '@/lib/pwa';
 
 export default function Home() {
   // undefined = still checking, null = logged out, string = display name
   const [user, setUser] = useState<string | null | undefined>(undefined);
+  const [installed, setInstalled] = useState(true); // assume installed until checked, so it never flashes
+
+  useEffect(() => {
+    setInstalled(isStandalone());
+  }, []);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -94,6 +100,27 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Install prompt — hidden once the app is running standalone */}
+      {!installed && (
+        <section className="max-w-6xl mx-auto px-4 pb-4">
+          <div className="card p-6 flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="bg-primary/20 p-3 rounded-xl shrink-0 self-start sm:self-center">
+              <Download className="w-6 h-6 text-primary" />
+            </div>
+            <div className="flex-grow">
+              <h3 className="text-xl font-bold mb-1">Get Hitboxd on your device</h3>
+              <p className="text-dark-text">
+                Install it on your phone or computer for its own icon, full screen, and alerts
+                when someone you follow posts a review.
+              </p>
+            </div>
+            <Link href="/install" className="btn-primary shrink-0 text-center">
+              How to install
+            </Link>
+          </div>
+        </section>
+      )}
 
       {/* CTA Section — only for visitors without an account */}
       {loggedOut && (

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Search, Gamepad2, Menu, X, LogOut, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import NotificationBell from './NotificationBell';
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -72,6 +73,7 @@ export default function Header() {
 
             {username ? (
               <div className="flex items-center gap-3">
+                <NotificationBell />
                 <Link
                   href="/profile"
                   className="flex items-center gap-2 text-sm text-primary hover:underline"
@@ -118,14 +120,17 @@ export default function Header() {
             <div className="pt-4 space-y-2 border-t border-dark-border">
               {username ? (
                 <>
-                  <Link
-                    href="/profile"
-                    className="flex items-center gap-2 text-sm text-primary"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <User className="w-4 h-4" />
-                    {username}
-                  </Link>
+                  <div className="flex items-center justify-between">
+                    <Link
+                      href="/profile"
+                      className="flex items-center gap-2 text-sm text-primary"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <User className="w-4 h-4" />
+                      {username}
+                    </Link>
+                    <NotificationBell />
+                  </div>
                   <button onClick={handleLogout} className="w-full btn-secondary text-center">
                     Logout
                   </button>

@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import { loadMyLibrary, MyLibrary } from '@/lib/user-data';
+import { loadMyLibrary, deleteReview, MyLibrary } from '@/lib/user-data';
+import { getFollowCounts, FollowCounts } from '@/lib/social-data';
 import GameTile from '@/components/GameTile';
 import { User, CheckCircle2, Bookmark, Heart, Star } from 'lucide-react';
 
@@ -12,6 +13,7 @@ export default function ProfilePage() {
   const [username, setUsername] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
   const [library, setLibrary] = useState<MyLibrary>({ interactions: [], reviews: [] });
+  const [followCounts, setFollowCounts] = useState<FollowCounts>({ followers: 0, following: 0 });
   const [loading, setLoading] = useState(true);
   const [notLoggedIn, setNotLoggedIn] = useState(false);
 
@@ -26,6 +28,7 @@ export default function ProfilePage() {
         setUsername(data.user.user_metadata?.username || null);
         setEmail(data.user.email || null);
         setLibrary(await loadMyLibrary());
+        setFollowCounts(await getFollowCounts(data.user.id));
       } catch (err) {
         console.error('Failed to load profile:', err);
       } finally {
@@ -35,6 +38,19 @@ export default function ProfilePage() {
 
     load();
   }, []);
+
+  const handleDeleteReview = async (reviewId: string) => {
+    if (!confirm('Delete this review? This cannot be undone.')) return;
+    try {
+      await deleteReview(reviewId);
+      setLibrary((prev) => ({
+        ...prev,
+        reviews: prev.reviews.filter((r) => r.id !== reviewId),
+      }));
+    } catch (err) {
+      console.error('Failed to delete review:', err);
+    }
+  };
 
   if (loading && !notLoggedIn) {
     return (
@@ -74,6 +90,15 @@ export default function ProfilePage() {
           <p className="text-dark-text text-sm mt-1">
             {played.length} played · {wishlist.length} wishlisted · {liked.length} liked ·{' '}
             {library.reviews.length} review(s)
+          </p>
+          <p className="text-dark-text text-sm mt-1">
+            <Link href="/profile/followers" className="hover:text-primary hover:underline">
+              {followCounts.followers} followers
+            </Link>{' '}
+            ·{' '}
+            <Link href="/profile/following" className="hover:text-primary hover:underline">
+              {followCounts.following} following
+            </Link>
           </p>
         </div>
       </div>
@@ -124,9 +149,24 @@ export default function ProfilePage() {
                   {r.content && (
                     <p className="text-dark-text text-sm line-clamp-3">{r.content}</p>
                   )}
-                  <p className="text-xs text-dark-text mt-2">
-                    {new Date(r.created_at).toLocaleDateString()}
-                  </p>
+                  <div className="flex items-center gap-3 mt-2">
+                    <p className="text-xs text-dark-text">
+                      {new Date(r.created_at).toLocaleDateString()}
+                    </p>
+                    <Link
+                      href={`/game/${r.game.igdb_id}`}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Edit
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteReview(r.id)}
+                      className="text-xs text-red-400 hover:underline"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

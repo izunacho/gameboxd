@@ -16,6 +16,7 @@ export interface UserInteraction {
 
 export interface CommunityReview {
   id: string;
+  user_id: string;
   rating: number;
   content: string | null;
   created_at: string;
@@ -69,7 +70,7 @@ async function ensureGame(game: IGDBGame): Promise<string> {
   return retry.data.id;
 }
 
-async function requireUser() {
+export async function requireUser() {
   const { data } = await supabase.auth.getUser();
   if (!data.user) throw new Error('NOT_LOGGED_IN');
   return data.user;
@@ -117,7 +118,7 @@ export async function getGameReviews(igdbId: number): Promise<CommunityReview[]>
 
   const { data, error } = await supabase
     .from('reviews')
-    .select('id, rating, content, created_at, users(username), review_likes(count)')
+    .select('id, user_id, rating, content, created_at, users(username), review_likes(count)')
     .eq('game_id', gameRow.id)
     .order('created_at', { ascending: false });
   if (error) throw error;
@@ -126,6 +127,7 @@ export async function getGameReviews(igdbId: number): Promise<CommunityReview[]>
 
   return (data || []).map((r: any) => ({
     id: r.id,
+    user_id: r.user_id,
     rating: r.rating,
     content: r.content,
     created_at: r.created_at,
@@ -133,6 +135,17 @@ export async function getGameReviews(igdbId: number): Promise<CommunityReview[]>
     likes: r.review_likes?.[0]?.count ?? 0,
     likedByMe: myLikes.has(r.id),
   }));
+}
+
+/** Delete the current user's own review. */
+export async function deleteReview(reviewId: string) {
+  const user = await requireUser();
+  const { error } = await supabase
+    .from('reviews')
+    .delete()
+    .eq('id', reviewId)
+    .eq('user_id', user.id);
+  if (error) throw error;
 }
 
 /** Like or unlike a review. Pass the current liked state. */
@@ -240,6 +253,7 @@ export interface MyLibrary {
   interactions: Array<{ id: string; type: InteractionType; game: LibraryGame }>;
   reviews: Array<{
     id: string;
+    user_id: string;
     rating: number;
     content: string | null;
     created_at: string;
@@ -257,7 +271,9 @@ async function fetchLibraryFor(userId: string): Promise<MyLibrary> {
       .order('created_at', { ascending: false }),
     supabase
       .from('reviews')
-      .select('id, rating, content, created_at, games(igdb_id, name, background_image, released)')
+      .select(
+        'id, user_id, rating, content, created_at, games(igdb_id, name, background_image, released)'
+      )
       .eq('user_id', userId)
       .order('created_at', { ascending: false }),
   ]);
@@ -272,6 +288,7 @@ async function fetchLibraryFor(userId: string): Promise<MyLibrary> {
       .filter((r: any) => r.games)
       .map((r: any) => ({
         id: r.id,
+        user_id: r.user_id,
         rating: r.rating,
         content: r.content,
         created_at: r.created_at,
@@ -288,13 +305,27 @@ export async function loadMyLibrary(): Promise<MyLibrary> {
 }
 
 export interface PublicProfile {
+  id: string;
   username: string;
   bio: string | null;
   created_at: string;
   library: MyLibrary;
 }
 
-/** Public profile by username — viewable by anyone. Returns null if not found. */
+/** Look up a user's id by username, for pages that don't need the full profile/library. */
+export async function getUserIdByUsername(
+  username: string
+): Promise<{ id: string; username: string } | null> {
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, username')
+    .eq('username', username)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+/** Public profile by username — viewable by anyone. Returns null if not found (or blocked). */
 export async function getPublicProfile(username: string): Promise<PublicProfile | null> {
   const { data: user, error } = await supabase
     .from('users')
@@ -305,6 +336,7 @@ export async function getPublicProfile(username: string): Promise<PublicProfile 
   if (!user) return null;
 
   return {
+    id: user.id,
     username: user.username,
     bio: user.bio,
     created_at: user.created_at,

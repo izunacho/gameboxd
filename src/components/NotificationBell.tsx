@@ -115,8 +115,15 @@ export default function NotificationBell() {
           <div className="px-2 py-2 border-b border-dark-border mb-1">
             {pushStatus === 'unsupported' && (
               <p className="text-xs text-dark-text">
-                Push alerts aren't available here. On iPhone, add Hitboxd to your Home Screen
-                (Share → Add to Home Screen) and enable them from the installed app.
+                Push alerts aren't available here. Install Hitboxd on your device first —{' '}
+                <Link
+                  href="/install"
+                  onClick={() => setOpen(false)}
+                  className="text-primary hover:underline"
+                >
+                  see how
+                </Link>
+                .
               </p>
             )}
             {pushStatus === 'denied' && (

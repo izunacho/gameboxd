@@ -3,8 +3,11 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
 import { getPublicProfile, PublicProfile } from '@/lib/user-data';
+import { getFollowStatus, getFollowCounts, getBlockStatus, FollowCounts } from '@/lib/social-data';
 import GameTile from '@/components/GameTile';
+import ProfileActionsMenu from '@/components/ProfileActionsMenu';
 import { User, CheckCircle2, Bookmark, Heart, Star, UserX } from 'lucide-react';
 
 interface PublicProfileClientProps {
@@ -15,6 +18,12 @@ export default function PublicProfileClient({ username }: PublicProfileClientPro
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [viewerId, setViewerId] = useState<string | null>(null);
+  const [viewerChecked, setViewerChecked] = useState(false);
+  const [followCounts, setFollowCounts] = useState<FollowCounts>({ followers: 0, following: 0 });
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -31,6 +40,28 @@ export default function PublicProfileClient({ username }: PublicProfileClientPro
     };
     load();
   }, [username]);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setViewerId(data.user?.id ?? null);
+      setViewerChecked(true);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!profile) return;
+    getFollowCounts(profile.id)
+      .then(setFollowCounts)
+      .catch((err) => console.error('Failed to load follow counts:', err));
+    if (viewerId && viewerId !== profile.id) {
+      getFollowStatus(viewerId, profile.id)
+        .then(setIsFollowing)
+        .catch((err) => console.error('Failed to load follow status:', err));
+      getBlockStatus(viewerId, profile.id)
+        .then((status) => setIsBlocked(status.blockedByMe))
+        .catch((err) => console.error('Failed to load block status:', err));
+    }
+  }, [profile, viewerId]);
 
   if (loading) {
     return (
@@ -75,8 +106,17 @@ export default function PublicProfileClient({ username }: PublicProfileClientPro
         <div className="bg-primary/20 p-4 rounded-full">
           <User className="w-10 h-10 text-primary" />
         </div>
-        <div>
-          <h1 className="text-3xl font-bold">{profile.username}</h1>
+        <div className="flex-grow min-w-0">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <h1 className="text-3xl font-bold">{profile.username}</h1>
+            {viewerChecked && viewerId && viewerId !== profile.id && (
+              <ProfileActionsMenu
+                targetUserId={profile.id}
+                initialFollowing={isFollowing}
+                initialBlocked={isBlocked}
+              />
+            )}
+          </div>
           {profile.bio && <p className="text-dark-text mt-1">{profile.bio}</p>}
           <p className="text-dark-text text-sm mt-1">
             Joined{' '}
@@ -88,6 +128,15 @@ export default function PublicProfileClient({ username }: PublicProfileClientPro
           <p className="text-dark-text text-sm mt-1">
             {played.length} played · {wishlist.length} wishlisted · {liked.length} liked ·{' '}
             {library.reviews.length} review(s)
+          </p>
+          <p className="text-dark-text text-sm mt-1">
+            <Link href={`/user/${encodeURIComponent(profile.username)}/followers`} className="hover:text-primary hover:underline">
+              {followCounts.followers} followers
+            </Link>{' '}
+            ·{' '}
+            <Link href={`/user/${encodeURIComponent(profile.username)}/following`} className="hover:text-primary hover:underline">
+              {followCounts.following} following
+            </Link>
           </p>
         </div>
       </div>

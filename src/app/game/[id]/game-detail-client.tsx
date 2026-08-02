@@ -9,8 +9,10 @@ import Link from 'next/link';
 import { Heart, Bookmark, CheckCircle2, Star, User } from 'lucide-react';
 import { useAppStore, InteractionType } from '@/lib/store';
 import ReviewLikeButton from '@/components/ReviewLikeButton';
+import { supabase } from '@/lib/supabase';
 import {
   submitReview,
+  deleteReview,
   getGameReviews,
   addInteractionDb,
   removeInteractionDb,
@@ -36,7 +38,28 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
   const [reviews, setReviews] = useState<CommunityReview[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(true);
 
+  const [myUserId, setMyUserId] = useState<string | null>(null);
+  const [prefilled, setPrefilled] = useState(false);
+
   const { hasInteraction, getInteraction, addInteraction, removeInteraction } = useAppStore();
+
+  const myReview = reviews.find((r) => r.user_id === myUserId);
+
+  // Who's looking at this page?
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setMyUserId(data.user?.id ?? null));
+  }, []);
+
+  // Pre-fill the form with the user's existing review, once, when both are known.
+  useEffect(() => {
+    if (prefilled || !myUserId || reviewsLoading) return;
+    const existing = reviews.find((r) => r.user_id === myUserId);
+    if (existing) {
+      setRating(existing.rating);
+      setReview(existing.content || '');
+    }
+    setPrefilled(true);
+  }, [myUserId, reviews, reviewsLoading, prefilled]);
 
   // Load game details from IGDB
   useEffect(() => {
@@ -91,6 +114,7 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
       setFormSuccess(true);
       setReview('');
       setRating(0);
+      setPrefilled(true); // don't re-prefill from the refreshed list below
       // Refresh the community reviews so the new one appears immediately
       setReviews(await getGameReviews(game.id));
     } catch (err: any) {
@@ -102,6 +126,24 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
       }
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDeleteReview = async () => {
+    if (!myReview || !game) return;
+    if (!confirm('Delete your review? This cannot be undone.')) return;
+    try {
+      await deleteReview(myReview.id);
+      setRating(0);
+      setReview('');
+      setFormSuccess(false);
+      setReviews(await getGameReviews(game.id));
+    } catch (err: any) {
+      if (err?.message === 'NOT_LOGGED_IN') {
+        router.push('/auth/login');
+      } else {
+        console.error('Failed to delete review:', err);
+      }
     }
   };
 
@@ -250,8 +292,10 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
       )}
 
       {/* Review Form */}
-      <div className="card p-6 mb-8">
-        <h2 className="text-2xl font-bold mb-6">Rate & Review</h2>
+      <div id="review-form" className="card p-6 mb-8">
+        <h2 className="text-2xl font-bold mb-6">
+          {myReview ? 'Edit Your Review' : 'Rate & Review'}
+        </h2>
         <form onSubmit={handleSubmitReview} className="space-y-4">
           {/* Star Rating */}
           <div>
@@ -300,13 +344,24 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
 
           {formSuccess && (
             <div className="bg-green-500/10 border border-green-500/50 text-green-400 p-3 rounded-lg text-sm">
-              Review published! You can see it below.
+              {myReview ? 'Review updated!' : 'Review published! You can see it below.'}
             </div>
           )}
 
-          <button type="submit" disabled={submitting || rating === 0} className="btn-primary w-full disabled:opacity-50">
-            {submitting ? 'Submitting...' : 'Submit Review'}
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={submitting || rating === 0}
+              className="btn-primary flex-1 disabled:opacity-50"
+            >
+              {submitting ? 'Submitting...' : myReview ? 'Update Review' : 'Submit Review'}
+            </button>
+            {myReview && (
+              <button type="button" onClick={handleDeleteReview} className="btn-secondary">
+                Delete Review
+              </button>
+            )}
+          </div>
         </form>
       </div>
 
@@ -346,9 +401,31 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
                 </div>
                 {r.content && <p className="text-dark-text leading-relaxed">{r.content}</p>}
                 <div className="flex items-center justify-between mt-3">
-                  <p className="text-xs text-dark-text">
-                    {new Date(r.created_at).toLocaleDateString()}
-                  </p>
+                  <div className="flex items-center gap-3">
+                    <p className="text-xs text-dark-text">
+                      {new Date(r.created_at).toLocaleDateString()}
+                    </p>
+                    {r.user_id === myUserId && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            document.getElementById('review-form')?.scrollIntoView({ behavior: 'smooth' })
+                          }
+                          className="text-xs text-primary hover:underline"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleDeleteReview}
+                          className="text-xs text-red-400 hover:underline"
+                        >
+                          Delete
+                        </button>
+                      </>
+                    )}
+                  </div>
                   <ReviewLikeButton
                     reviewId={r.id}
                     initialLikes={r.likes}

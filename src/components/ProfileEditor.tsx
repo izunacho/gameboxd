@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
-import { Check, Sparkles } from 'lucide-react';
-import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { Check, Sparkles, Link2, Loader2 } from 'lucide-react';
 import Avatar from './Avatar';
 import { AVATAR_PRESETS } from '@/lib/avatars';
 import { setMyAvatar, updateMyProfile, setMyCosmetics } from '@/lib/user-data';
 import { ACCENT_PRESETS, FRAME_PRESETS, getAccent, getFrameClass } from '@/lib/cosmetics';
+import { supabase } from '@/lib/supabase';
 
 const PATREON_URL = 'https://www.patreon.com/cw/hitboxd';
 
@@ -53,6 +53,60 @@ export default function ProfileEditor({
   const [tick, setTick] = useState(tickColor);
   const [frame, setFrame] = useState(avatarFrame);
   const [savingCosmetic, setSavingCosmetic] = useState(false);
+
+  const [patreonName, setPatreonName] = useState<string | null | undefined>(undefined); // undefined = loading
+  const [patreonBusy, setPatreonBusy] = useState(false);
+
+  useEffect(() => {
+    supabase
+      .from('patreon_links')
+      .select('patreon_full_name')
+      .maybeSingle()
+      .then(
+        ({ data }) => setPatreonName(data?.patreon_full_name ?? null),
+        () => setPatreonName(null)
+      );
+  }, []);
+
+  async function withAuthHeader(): Promise<Record<string, string>> {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) throw new Error('NOT_LOGGED_IN');
+    return { Authorization: `Bearer ${token}` };
+  }
+
+  const handleConnectPatreon = async () => {
+    setPatreonBusy(true);
+    setError(null);
+    try {
+      const headers = await withAuthHeader();
+      const res = await fetch('/api/patreon/connect', { headers });
+      if (!res.ok) throw new Error('Failed to start Patreon connect');
+      const { url } = await res.json();
+      window.location.href = url;
+    } catch (err) {
+      setError("Couldn't connect to Patreon. Try again.");
+      console.error('Patreon connect failed:', err);
+      setPatreonBusy(false);
+    }
+  };
+
+  const handleDisconnectPatreon = async () => {
+    if (!confirm('Disconnect your Patreon account?')) return;
+    setPatreonBusy(true);
+    setError(null);
+    try {
+      const headers = await withAuthHeader();
+      const res = await fetch('/api/patreon/disconnect', { method: 'POST', headers });
+      if (!res.ok) throw new Error('Failed to disconnect');
+      setPatreonName(null);
+    } catch (err) {
+      setError("Couldn't disconnect Patreon. Try again.");
+      console.error('Patreon disconnect failed:', err);
+    } finally {
+      setPatreonBusy(false);
+    }
+  };
 
   /**
    * Cosmetics save on click like the avatar picker does, rolling back the
@@ -214,6 +268,34 @@ export default function ProfileEditor({
             .
           </p>
         )}
+
+        {/* Patreon connection — links this account so pledges/cancellations
+            update premium automatically instead of needing a manual grant. */}
+        <div className="flex items-center justify-between gap-3 bg-dark-bg rounded-lg px-4 py-3 mb-5">
+          <div className="flex items-center gap-2 min-w-0">
+            <Link2 className="w-4 h-4 text-dark-text shrink-0" />
+            {patreonName === undefined ? (
+              <span className="text-sm text-dark-text">Checking Patreon connection...</span>
+            ) : patreonName !== null ? (
+              <span className="text-sm truncate">
+                Connected as <span className="font-medium">{patreonName}</span>
+              </span>
+            ) : (
+              <span className="text-sm text-dark-text">Not connected to Patreon</span>
+            )}
+          </div>
+          {patreonName !== undefined && (
+            <button
+              type="button"
+              onClick={patreonName !== null ? handleDisconnectPatreon : handleConnectPatreon}
+              disabled={patreonBusy}
+              className="btn-secondary text-xs shrink-0 flex items-center gap-1.5 disabled:opacity-50"
+            >
+              {patreonBusy && <Loader2 className="w-3 h-3 animate-spin" />}
+              {patreonName !== null ? 'Disconnect' : 'Connect Patreon'}
+            </button>
+          )}
+        </div>
 
         <div className={isPremium ? '' : 'opacity-50 pointer-events-none select-none'}>
           {/* Accent colour */}

@@ -59,6 +59,26 @@ export interface Database {
           expires_at?: string | null;
         };
       };
+      patreon_links: {
+        Row: {
+          user_id: string;
+          patreon_user_id: string;
+          patreon_full_name: string | null;
+          connected_at: string;
+        };
+        Insert: {
+          user_id: string;
+          patreon_user_id: string;
+          patreon_full_name?: string | null;
+          connected_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          patreon_user_id?: string;
+          patreon_full_name?: string | null;
+          connected_at?: string;
+        };
+      };
       games: {
         Row: {
           id: string;

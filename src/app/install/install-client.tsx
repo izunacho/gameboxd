@@ -242,7 +242,7 @@ export default function InstallClient() {
         <ol className="space-y-3">
           {platform.steps.map((step, i) => (
             <li key={i} className="flex gap-3">
-              <span className="shrink-0 w-6 h-6 rounded-full bg-primary text-black font-bold text-xs flex items-center justify-center">
+              <span className="shrink-0 w-6 h-6 rounded-full bg-primary on-primary font-bold text-xs flex items-center justify-center">
                 {i + 1}
               </span>
               <span className="text-dark-text leading-relaxed">{step}</span>

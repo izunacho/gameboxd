@@ -5,6 +5,7 @@
  */
 
 import { supabase } from './supabase';
+import { USER_COSMETIC_FIELDS, readCosmetics, UserCosmetics } from './cosmetics';
 
 export interface AppNotification {
   id: string;
@@ -12,6 +13,7 @@ export interface AppNotification {
   read: boolean;
   created_at: string;
   actorUsername: string;
+  actorCosmetics: UserCosmetics;
   review: { igdbId: number; gameName: string } | null;
 }
 
@@ -23,7 +25,7 @@ export async function getMyNotifications(limit = 20): Promise<AppNotification[]>
   const { data, error } = await supabase
     .from('notifications')
     .select(
-      'id, type, read, created_at, users!notifications_actor_id_fkey(username), reviews(games(igdb_id, name))'
+      `id, type, read, created_at, users!notifications_actor_id_fkey(username, ${USER_COSMETIC_FIELDS}), reviews(games(igdb_id, name))`
     )
     .eq('user_id', auth.user.id)
     .order('created_at', { ascending: false })
@@ -36,6 +38,7 @@ export async function getMyNotifications(limit = 20): Promise<AppNotification[]>
     read: n.read,
     created_at: n.created_at,
     actorUsername: n.users?.username || 'someone',
+    actorCosmetics: readCosmetics(n.users),
     review: n.reviews?.games
       ? { igdbId: n.reviews.games.igdb_id, gameName: n.reviews.games.name }
       : null,

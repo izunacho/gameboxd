@@ -7,6 +7,9 @@ export interface Database {
           username: string;
           avatar_url: string | null;
           bio: string | null;
+          accent_color: string | null;
+          tick_color: string | null;
+          avatar_frame: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -15,6 +18,9 @@ export interface Database {
           username: string;
           avatar_url?: string | null;
           bio?: string | null;
+          accent_color?: string | null;
+          tick_color?: string | null;
+          avatar_frame?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -23,8 +29,34 @@ export interface Database {
           username?: string;
           avatar_url?: string | null;
           bio?: string | null;
+          accent_color?: string | null;
+          tick_color?: string | null;
+          avatar_frame?: string | null;
           created_at?: string;
           updated_at?: string;
+        };
+      };
+      premium_members: {
+        Row: {
+          id: string;
+          user_id: string;
+          source: 'manual' | 'patreon';
+          granted_at: string;
+          expires_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          source?: 'manual' | 'patreon';
+          granted_at?: string;
+          expires_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          source?: 'manual' | 'patreon';
+          granted_at?: string;
+          expires_at?: string | null;
         };
       };
       games: {

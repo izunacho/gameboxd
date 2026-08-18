@@ -3,6 +3,7 @@ import './globals.css';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import UserDataLoader from '@/components/UserDataLoader';
+import AccentLoader from '@/components/AccentLoader';
 import PWARegister from '@/components/PWARegister';
 
 export const viewport: Viewport = {
@@ -47,6 +48,7 @@ export default function RootLayout({
       <body className="bg-dark-bg text-dark-text">
         <PWARegister />
         <UserDataLoader />
+        <AccentLoader />
         <Header />
         <main className="min-h-screen pb-20 md:pb-0">
           {children}

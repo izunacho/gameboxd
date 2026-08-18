@@ -7,6 +7,7 @@ import { Users, User, Star } from 'lucide-react';
 import { getCommunityFeed, FeedReview } from '@/lib/user-data';
 import ReviewLikeButton from '@/components/ReviewLikeButton';
 import RatingBadge from '@/components/RatingBadge';
+import VerifiedTick from '@/components/VerifiedTick';
 import UserSearch from '@/components/UserSearch';
 
 const PAGE_SIZE = 20;
@@ -151,6 +152,7 @@ export default function CommunityPage() {
                       >
                         {r.username}
                       </Link>
+                      <VerifiedTick cosmetics={r.cosmetics} className="w-3.5 h-3.5" />
                       <span>· {timeAgo(r.created_at)}</span>
                     </p>
                   </div>

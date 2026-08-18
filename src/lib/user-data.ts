@@ -7,6 +7,13 @@ import { supabase } from './supabase';
 import { IGDBGame, getIGDBImageUrl } from './igdb';
 import { isPresetAvatar } from './avatars';
 import { normalizeRating } from './rating';
+import {
+  USER_COSMETIC_FIELDS,
+  readCosmetics,
+  UserCosmetics,
+  isAccentId,
+  isFrameId,
+} from './cosmetics';
 
 export type InteractionType = 'played' | 'wishlist' | 'liked';
 
@@ -23,6 +30,7 @@ export interface CommunityReview {
   content: string | null;
   created_at: string;
   username: string;
+  cosmetics: UserCosmetics;
   likes: number;
   likedByMe: boolean;
 }
@@ -126,7 +134,9 @@ export async function getGameReviews(igdbId: number): Promise<CommunityReview[]>
 
   const { data, error } = await supabase
     .from('reviews')
-    .select('id, user_id, rating, content, created_at, users(username), review_likes(count)')
+    .select(
+      `id, user_id, rating, content, created_at, users(username, ${USER_COSMETIC_FIELDS}), review_likes(count)`
+    )
     .eq('game_id', gameRow.id)
     .order('created_at', { ascending: false });
   if (error) throw error;
@@ -140,6 +150,7 @@ export async function getGameReviews(igdbId: number): Promise<CommunityReview[]>
     content: r.content,
     created_at: r.created_at,
     username: r.users?.username || 'anonymous',
+    cosmetics: readCosmetics(r.users),
     likes: r.review_likes?.[0]?.count ?? 0,
     likedByMe: myLikes.has(r.id),
   }));
@@ -221,6 +232,7 @@ export interface FeedReview {
   content: string | null;
   created_at: string;
   username: string;
+  cosmetics: UserCosmetics;
   game: LibraryGame;
   likes: number;
   likedByMe: boolean;
@@ -235,7 +247,7 @@ export async function getCommunityFeed(page = 0, pageSize = 20): Promise<FeedRev
   const { data, error } = await supabase
     .from('reviews')
     .select(
-      'id, rating, content, created_at, users(username), games(igdb_id, name, background_image, released), review_likes(count)'
+      `id, rating, content, created_at, users(username, ${USER_COSMETIC_FIELDS}), games(igdb_id, name, background_image, released), review_likes(count)`
     )
     .order('created_at', { ascending: false })
     .range(from, from + pageSize - 1);
@@ -251,6 +263,7 @@ export async function getCommunityFeed(page = 0, pageSize = 20): Promise<FeedRev
       content: r.content,
       created_at: r.created_at,
       username: r.users?.username || 'anonymous',
+      cosmetics: readCosmetics(r.users),
       game: r.games,
       likes: r.review_likes?.[0]?.count ?? 0,
       likedByMe: myLikes.has(r.id),
@@ -318,6 +331,9 @@ export interface PublicProfile {
   bio: string | null;
   avatar_url: string | null;
   created_at: string;
+  /** The owner's accent id — visitors see their profile in their colour. */
+  accent_color: string | null;
+  cosmetics: UserCosmetics;
   library: MyLibrary;
 }
 
@@ -326,6 +342,13 @@ export interface MyProfile {
   username: string;
   bio: string | null;
   avatar_url: string | null;
+  /** Raw stored preferences — shown selected in the editor even without premium. */
+  accent_color: string | null;
+  tick_color: string | null;
+  avatar_frame: string | null;
+  /** Whether those preferences actually render. */
+  isPremium: boolean;
+  cosmetics: UserCosmetics;
 }
 
 /** The logged-in user's own profile row. Null when logged out. */
@@ -335,11 +358,59 @@ export async function getMyProfile(): Promise<MyProfile | null> {
 
   const { data, error } = await supabase
     .from('users')
-    .select('id, username, bio, avatar_url')
+    .select(`id, username, bio, avatar_url, accent_color, ${USER_COSMETIC_FIELDS}`)
     .eq('id', auth.user.id)
     .maybeSingle();
   if (error) throw error;
-  return data;
+  if (!data) return null;
+
+  const row = data as any;
+  const cosmetics = readCosmetics(row);
+  return {
+    id: row.id,
+    username: row.username,
+    bio: row.bio,
+    avatar_url: row.avatar_url,
+    accent_color: row.accent_color,
+    tick_color: row.tick_color,
+    avatar_frame: row.avatar_frame,
+    isPremium: cosmetics.isPremium,
+    cosmetics,
+  };
+}
+
+/**
+ * Save cosmetic preferences. These are stored for anyone, but only render
+ * for premium members — the entitlement lives in premium_members, which no
+ * client can write to.
+ */
+export async function setMyCosmetics(fields: {
+  accent_color?: string | null;
+  tick_color?: string | null;
+  avatar_frame?: string | null;
+}) {
+  const user = await requireUser();
+
+  const update: Record<string, string | null> = {};
+  if ('accent_color' in fields) {
+    const v = fields.accent_color;
+    if (v !== null && v !== undefined && !isAccentId(v)) throw new Error('UNKNOWN_ACCENT');
+    update.accent_color = v ?? null;
+  }
+  if ('tick_color' in fields) {
+    const v = fields.tick_color;
+    if (v !== null && v !== undefined && !isAccentId(v)) throw new Error('UNKNOWN_TICK_COLOR');
+    update.tick_color = v ?? null;
+  }
+  if ('avatar_frame' in fields) {
+    const v = fields.avatar_frame;
+    if (v !== null && v !== undefined && !isFrameId(v)) throw new Error('UNKNOWN_FRAME');
+    update.avatar_frame = v ?? null;
+  }
+  if (Object.keys(update).length === 0) return;
+
+  const { error } = await supabase.from('users').update(update).eq('id', user.id);
+  if (error) throw error;
 }
 
 /** Pick one of the preset avatars (or none). */
@@ -379,15 +450,19 @@ export async function getUserIdByUsername(
 
 /** Public profile by username — viewable by anyone. Returns null if not found (or blocked). */
 export async function getPublicProfile(username: string): Promise<PublicProfile | null> {
-  const { data: user, error } = await supabase
+  const { data: row, error } = await supabase
     .from('users')
-    .select('id, username, bio, avatar_url, created_at')
+    .select(`id, username, bio, avatar_url, created_at, accent_color, ${USER_COSMETIC_FIELDS}`)
     .eq('username', username)
     .maybeSingle();
   if (error) throw error;
-  if (!user) return null;
+  if (!row) return null;
 
+  const user = row as any;
+  const cosmetics = readCosmetics(user);
   return {
+    accent_color: cosmetics.isPremium ? user.accent_color : null,
+    cosmetics,
     id: user.id,
     username: user.username,
     bio: user.bio,

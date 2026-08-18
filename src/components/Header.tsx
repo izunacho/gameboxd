@@ -6,10 +6,14 @@ import { Search, Gamepad2, Menu, X, LogOut, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import NotificationBell from './NotificationBell';
+import VerifiedTick from './VerifiedTick';
+import { useAppStore } from '@/lib/store';
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
+  // Loaded once by <AccentLoader />, so the badge costs no extra query here.
+  const myCosmetics = useAppStore((s) => s.myCosmetics);
   const router = useRouter();
 
   useEffect(() => {
@@ -81,6 +85,7 @@ export default function Header() {
                 >
                   <User className="w-4 h-4" />
                   {username}
+                  <VerifiedTick cosmetics={myCosmetics} className="w-3.5 h-3.5" />
                 </Link>
                 <button onClick={handleLogout} className="btn-secondary text-sm flex items-center gap-1">
                   <LogOut className="w-4 h-4" />
@@ -128,6 +133,7 @@ export default function Header() {
                     >
                       <User className="w-4 h-4" />
                       {username}
+                      <VerifiedTick cosmetics={myCosmetics} className="w-3.5 h-3.5" />
                     </Link>
                     <NotificationBell />
                   </div>

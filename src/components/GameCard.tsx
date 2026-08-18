@@ -59,7 +59,7 @@ export default function GameCard({ game }: GameCardProps) {
 
           {/* Rating Badge */}
           {game.rating && (
-            <div className="absolute top-2 right-2 bg-primary text-black font-bold px-2 py-1 rounded text-sm">
+            <div className="absolute top-2 right-2 bg-primary on-primary font-bold px-2 py-1 rounded text-sm">
               {Math.round(game.rating)}
             </div>
           )}
@@ -84,7 +84,7 @@ export default function GameCard({ game }: GameCardProps) {
                 toggle('played');
               }}
               className={`flex-1 btn text-xs py-1 flex items-center justify-center gap-1 ${
-                isPlayed ? 'bg-primary text-black' : 'bg-dark-border'
+                isPlayed ? 'bg-primary on-primary' : 'bg-dark-border'
               }`}
               title="Mark as played"
             >
@@ -97,7 +97,7 @@ export default function GameCard({ game }: GameCardProps) {
                 toggle('wishlist');
               }}
               className={`flex-1 btn text-xs py-1 flex items-center justify-center gap-1 ${
-                isWishlisted ? 'bg-primary text-black' : 'bg-dark-border'
+                isWishlisted ? 'bg-primary on-primary' : 'bg-dark-border'
               }`}
               title="Add to wishlist"
             >
@@ -110,7 +110,7 @@ export default function GameCard({ game }: GameCardProps) {
                 toggle('liked');
               }}
               className={`flex-1 btn text-xs py-1 flex items-center justify-center gap-1 ${
-                isLiked ? 'bg-primary text-black' : 'bg-dark-border'
+                isLiked ? 'bg-primary on-primary' : 'bg-dark-border'
               }`}
               title="Like this game"
             >

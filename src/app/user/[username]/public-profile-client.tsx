@@ -8,6 +8,7 @@ import { getPublicProfile, PublicProfile } from '@/lib/user-data';
 import { getFollowStatus, getFollowCounts, getBlockStatus, FollowCounts } from '@/lib/social-data';
 import GameTile from '@/components/GameTile';
 import Avatar from '@/components/Avatar';
+import RatingBadge from '@/components/RatingBadge';
 import ProfileActionsMenu from '@/components/ProfileActionsMenu';
 import CollapsibleSection from '@/components/CollapsibleSection';
 import { CheckCircle2, Bookmark, Heart, Star, UserX } from 'lucide-react';
@@ -176,9 +177,7 @@ export default function PublicProfileClient({ username }: PublicProfileClientPro
                     >
                       {r.game.name}
                     </Link>
-                    <span className="bg-primary text-black font-bold px-2 py-0.5 rounded text-sm shrink-0">
-                      {r.rating}/100
-                    </span>
+                    <RatingBadge rating={r.rating} className="shrink-0" />
                   </div>
                   {r.content && (
                     <p className="text-dark-text text-sm line-clamp-3">{r.content}</p>

@@ -6,6 +6,7 @@
 import { supabase } from './supabase';
 import { IGDBGame, getIGDBImageUrl } from './igdb';
 import { isPresetAvatar } from './avatars';
+import { normalizeRating } from './rating';
 
 export type InteractionType = 'played' | 'wishlist' | 'liked';
 
@@ -80,13 +81,19 @@ export async function requireUser() {
 /** Create or update the current user's review for a game. */
 export async function submitReview(game: IGDBGame, rating: number, content: string) {
   const user = await requireUser();
+
+  // Last line of defence before the DB's INTEGER column and 0-100 CHECK:
+  // a decimal or out-of-range value would surface as a generic failure.
+  const safeRating = normalizeRating(rating);
+  if (safeRating === null) throw new Error('INVALID_RATING');
+
   const gameId = await ensureGame(game);
 
   const { error } = await supabase.from('reviews').upsert(
     {
       game_id: gameId,
       user_id: user.id,
-      rating,
+      rating: safeRating,
       content: content.trim() || null,
     },
     { onConflict: 'game_id,user_id' }

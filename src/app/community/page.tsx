@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Users, User, Star } from 'lucide-react';
 import { getCommunityFeed, FeedReview } from '@/lib/user-data';
 import ReviewLikeButton from '@/components/ReviewLikeButton';
+import RatingBadge from '@/components/RatingBadge';
 import UserSearch from '@/components/UserSearch';
 
 const PAGE_SIZE = 20;
@@ -153,9 +154,7 @@ export default function CommunityPage() {
                       <span>· {timeAgo(r.created_at)}</span>
                     </p>
                   </div>
-                  <span className="bg-primary text-black font-bold px-2 py-0.5 rounded text-sm shrink-0">
-                    {r.rating}/100
-                  </span>
+                  <RatingBadge rating={r.rating} className="shrink-0" />
                 </div>
 
                 {r.content && (

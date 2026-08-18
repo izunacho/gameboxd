@@ -57,13 +57,86 @@ body {
   @apply rounded-xl border border-dark-border bg-dark-surface/50 hover:bg-dark-surface/70 transition-all;
 }
 
-/* Rating stars */
-.star-rating {
-  @apply flex gap-1;
+/* Rating slider (0-100)
+   Driven by two custom properties set inline on the input:
+     --v           the current score, 0-100
+     --fill-color  the colour of the filled portion
+   Custom properties inherit into the vendor pseudo-elements, so one inline
+   assignment paints all of them. The input is 44px tall for a comfortable
+   touch target while the painted track stays 10px.
+   --fill-pos follows the thumb's CENTRE rather than a flat percentage of the
+   track, otherwise the fill stops ~11px short of the thumb at 100. */
+.rating-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 44px;
+  background: transparent;
+  cursor: pointer;
+  transition: none;
+  --fill-pos: calc(11px + (100% - 22px) * var(--v) / 100);
 }
 
-.star-rating svg {
-  @apply w-5 h-5 cursor-pointer transition-colors;
+.rating-slider::-webkit-slider-runnable-track {
+  height: 10px;
+  border-radius: 9999px;
+  transition: none;
+  background: linear-gradient(
+    to right,
+    var(--fill-color) 0 var(--fill-pos),
+    #2d2d2d var(--fill-pos) 100%
+  );
+}
+
+.rating-slider::-moz-range-track {
+  height: 10px;
+  border-radius: 9999px;
+  transition: none;
+  background: linear-gradient(
+    to right,
+    var(--fill-color) 0 var(--fill-pos),
+    #2d2d2d var(--fill-pos) 100%
+  );
+}
+
+/* Firefox paints its own progress fill on top of ours */
+.rating-slider::-moz-range-progress {
+  background: transparent;
+}
+
+.rating-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  margin-top: -6px; /* (track 10px - thumb 22px) / 2 */
+  border-radius: 9999px;
+  background: #e0e0e0;
+  border: 2px solid #0f0f0f;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15);
+  transition: none;
+}
+
+.rating-slider::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  background: #e0e0e0;
+  border: 2px solid #0f0f0f;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15);
+  transition: none;
+}
+
+/* Keyboard focus gets a ring; mouse clicks don't */
+.rating-slider:focus {
+  outline: none;
+}
+
+.rating-slider:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px rgba(0, 208, 132, 0.6);
+}
+
+.rating-slider:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 3px rgba(0, 208, 132, 0.6);
 }
 
 /* Responsive grid */

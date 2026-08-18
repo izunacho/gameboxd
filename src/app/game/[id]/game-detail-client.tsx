@@ -10,6 +10,7 @@ import { Heart, Bookmark, CheckCircle2, Minus, Plus, User } from 'lucide-react';
 import { useAppStore, InteractionType } from '@/lib/store';
 import ReviewLikeButton from '@/components/ReviewLikeButton';
 import RatingBadge from '@/components/RatingBadge';
+import VerifiedTick from '@/components/VerifiedTick';
 import { supabase } from '@/lib/supabase';
 import { ratingColor, ratingTextColor, normalizeRating, RATING_NEUTRAL } from '@/lib/rating';
 import {
@@ -449,6 +450,7 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
                   >
                     <User className="w-4 h-4" />
                     {r.username}
+                    <VerifiedTick cosmetics={r.cosmetics} className="w-4 h-4" />
                   </Link>
                   <RatingBadge rating={r.rating} />
                 </div>

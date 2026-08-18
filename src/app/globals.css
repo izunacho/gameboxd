@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Accent colour, as space-separated RGB channels so Tailwind's
+   <alpha-value> form can apply opacity to it. These are the free-tier
+   defaults; AccentLoader overrides them on <html> for premium members, and
+   a public profile overrides them again for its own subtree. */
+:root {
+  --color-primary: 0 208 132;
+  --color-primary-fg: 0 0 0;
+}
+
 * {
   @apply transition-colors duration-200;
 }
@@ -45,7 +54,15 @@ body {
 }
 
 .btn-primary {
-  @apply btn bg-primary text-black hover:bg-opacity-90 active:scale-95;
+  @apply btn bg-primary hover:bg-opacity-90 active:scale-95;
+  color: rgb(var(--color-primary-fg));
+}
+
+/* Text sitting on top of an accent-coloured background. Pairs with
+   bg-primary wherever a solid accent fill carries text — the foreground
+   can't be a fixed black once the accent is user-chosen. */
+.on-primary {
+  color: rgb(var(--color-primary-fg));
 }
 
 .btn-secondary {
@@ -132,16 +149,86 @@ body {
 }
 
 .rating-slider:focus-visible::-webkit-slider-thumb {
-  box-shadow: 0 0 0 3px rgba(0, 208, 132, 0.6);
+  box-shadow: 0 0 0 3px rgb(var(--color-primary) / 0.6);
 }
 
 .rating-slider:focus-visible::-moz-range-thumb {
-  box-shadow: 0 0 0 3px rgba(0, 208, 132, 0.6);
+  box-shadow: 0 0 0 3px rgb(var(--color-primary) / 0.6);
 }
 
 /* Responsive grid */
 @layer utilities {
   .game-grid {
     @apply grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5;
+  }
+}
+
+/* Premium avatar frames.
+   Drawn OUTSIDE the avatar: the sprites have an opaque background plate that
+   rounded-full clips, so anything behind them would be invisible. Applied to
+   a wrapper that sizes itself to the avatar, hence the padding + gradient
+   background rather than a border on the image itself. */
+.frame-gold,
+.frame-neon,
+.frame-holo,
+.frame-double,
+.frame-dashed,
+.frame-pulse {
+  display: inline-flex;
+  border-radius: 9999px;
+  padding: 3px;
+}
+
+.frame-gold {
+  background: linear-gradient(135deg, #fde68a, #f59e0b 45%, #b45309);
+}
+
+.frame-neon {
+  background: rgb(var(--color-primary));
+  box-shadow: 0 0 10px rgb(var(--color-primary) / 0.8);
+}
+
+.frame-holo {
+  background: conic-gradient(
+    from 0deg,
+    #f472b6,
+    #a78bfa,
+    #38bdf8,
+    #34d399,
+    #fbbf24,
+    #f472b6
+  );
+}
+
+.frame-double {
+  background: #e0e0e0;
+  box-shadow: 0 0 0 2px #0f0f0f, 0 0 0 4px #e0e0e0;
+}
+
+.frame-dashed {
+  background: repeating-conic-gradient(
+    rgb(var(--color-primary)) 0deg 12deg,
+    transparent 12deg 24deg
+  );
+}
+
+.frame-pulse {
+  background: rgb(var(--color-primary));
+  animation: frame-pulse 2s ease-in-out infinite;
+}
+
+@keyframes frame-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(var(--color-primary) / 0.6);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgb(var(--color-primary) / 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frame-pulse {
+    animation: none;
   }
 }

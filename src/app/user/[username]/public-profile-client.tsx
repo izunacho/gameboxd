@@ -9,6 +9,8 @@ import { getFollowStatus, getFollowCounts, getBlockStatus, FollowCounts } from '
 import GameTile from '@/components/GameTile';
 import Avatar from '@/components/Avatar';
 import RatingBadge from '@/components/RatingBadge';
+import VerifiedTick from '@/components/VerifiedTick';
+import { getAccent } from '@/lib/cosmetics';
 import ProfileActionsMenu from '@/components/ProfileActionsMenu';
 import CollapsibleSection from '@/components/CollapsibleSection';
 import { CheckCircle2, Bookmark, Heart, Star, UserX } from 'lucide-react';
@@ -103,14 +105,33 @@ export default function PublicProfileClient({ username }: PublicProfileClientPro
   const liked = library.interactions.filter((i) => i.type === 'liked');
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
+    // A premium member's profile shows in their own accent to every visitor.
+    // CSS variables inherit, so overriding them here repaints this subtree
+    // without a single class changing.
+    <div
+      className="max-w-7xl mx-auto px-4 py-8 space-y-6"
+      style={
+        profile.accent_color
+          ? ({
+              '--color-primary': getAccent(profile.accent_color).rgb,
+              '--color-primary-fg': getAccent(profile.accent_color).fg,
+            } as React.CSSProperties)
+          : undefined
+      }
+    >
       {/* Profile Header */}
       <div className="card p-6 flex items-start gap-4">
-        <Avatar url={profile.avatar_url} username={profile.username} size="lg" />
+        <Avatar
+          url={profile.avatar_url}
+          username={profile.username}
+          size="lg"
+          frame={profile.cosmetics.frame}
+        />
         <div className="flex-grow min-w-0">
           <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-            <h1 className="text-2xl sm:text-3xl font-bold min-w-0 break-words">
+            <h1 className="text-2xl sm:text-3xl font-bold min-w-0 break-words flex items-center gap-2">
               {profile.username}
+              <VerifiedTick cosmetics={profile.cosmetics} className="w-5 h-5" />
             </h1>
             {viewerChecked && viewerId && viewerId !== profile.id && (
               <ProfileActionsMenu

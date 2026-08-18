@@ -9,6 +9,8 @@ import { getFollowCounts, FollowCounts } from '@/lib/social-data';
 import GameTile from '@/components/GameTile';
 import Avatar from '@/components/Avatar';
 import RatingBadge from '@/components/RatingBadge';
+import VerifiedTick from '@/components/VerifiedTick';
+import { getAccent, tickColor, DEFAULT_ACCENT_ID } from '@/lib/cosmetics';
 import ProfileEditor from '@/components/ProfileEditor';
 import CollapsibleSection from '@/components/CollapsibleSection';
 import { User, CheckCircle2, Bookmark, Heart, Star, Pencil } from 'lucide-react';
@@ -59,16 +61,44 @@ export default function ProfilePage() {
     }
   };
 
-  const handleProfileSaved = (changes: { avatarUrl?: string | null; bio?: string | null }) => {
-    setProfile((prev) =>
-      prev
-        ? {
-            ...prev,
-            avatar_url: changes.avatarUrl !== undefined ? changes.avatarUrl : prev.avatar_url,
-            bio: changes.bio !== undefined ? changes.bio : prev.bio,
-          }
-        : prev
-    );
+  const handleProfileSaved = (changes: {
+    avatarUrl?: string | null;
+    bio?: string | null;
+    accentColor?: string | null;
+    tickColor?: string | null;
+    avatarFrame?: string | null;
+  }) => {
+    setProfile((prev) => {
+      if (!prev) return prev;
+      const next = {
+        ...prev,
+        avatar_url: changes.avatarUrl !== undefined ? changes.avatarUrl : prev.avatar_url,
+        bio: changes.bio !== undefined ? changes.bio : prev.bio,
+        accent_color:
+          changes.accentColor !== undefined ? changes.accentColor : prev.accent_color,
+        tick_color: changes.tickColor !== undefined ? changes.tickColor : prev.tick_color,
+        avatar_frame:
+          changes.avatarFrame !== undefined ? changes.avatarFrame : prev.avatar_frame,
+      };
+      // Keep the rendered badge/frame in step with the new preferences.
+      return {
+        ...next,
+        cosmetics: next.isPremium
+          ? {
+              isPremium: true,
+              tickColor: tickColor(next.tick_color),
+              frame: next.avatar_frame,
+            }
+          : next.cosmetics,
+      };
+    });
+
+    // Repaint the app immediately when the accent changes.
+    if (changes.accentColor !== undefined && profile?.isPremium) {
+      const accent = getAccent(changes.accentColor ?? DEFAULT_ACCENT_ID);
+      document.documentElement.style.setProperty('--color-primary', accent.rgb);
+      document.documentElement.style.setProperty('--color-primary-fg', accent.fg);
+    }
   };
 
   if (loading && !notLoggedIn) {
@@ -101,10 +131,18 @@ export default function ProfilePage() {
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
       {/* Profile Header */}
       <div className="card p-6 flex items-start gap-4">
-        <Avatar url={profile?.avatar_url ?? null} username={displayName} size="lg" />
+        <Avatar
+          url={profile?.avatar_url ?? null}
+          username={displayName}
+          size="lg"
+          frame={profile?.cosmetics.frame ?? null}
+        />
         <div className="flex-grow min-w-0">
           <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-            <h1 className="text-2xl sm:text-3xl font-bold min-w-0 break-words">{displayName}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold min-w-0 break-words flex items-center gap-2">
+              {displayName}
+              <VerifiedTick cosmetics={profile?.cosmetics} className="w-5 h-5" />
+            </h1>
             <button
               onClick={() => setEditing((v) => !v)}
               className="btn-secondary text-sm flex items-center gap-1.5 shrink-0"
@@ -136,6 +174,10 @@ export default function ProfilePage() {
           avatarUrl={profile?.avatar_url ?? null}
           bio={profile?.bio ?? null}
           username={displayName}
+          isPremium={profile?.isPremium ?? false}
+          accentColor={profile?.accent_color ?? null}
+          tickColor={profile?.tick_color ?? null}
+          avatarFrame={profile?.avatar_frame ?? null}
           onSaved={handleProfileSaved}
           onClose={() => setEditing(false)}
         />

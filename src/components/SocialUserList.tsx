@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Avatar from './Avatar';
+import VerifiedTick from './VerifiedTick';
 import { SocialUser } from '@/lib/social-data';
 
 /** Shared row rendering for followers/following list pages. */
@@ -22,8 +23,16 @@ export default function SocialUserList({
           href={`/user/${encodeURIComponent(u.username)}`}
           className="card p-4 flex items-center gap-3 hover:border-primary transition-colors"
         >
-          <Avatar url={u.avatar_url} username={u.username} size="sm" />
-          <span className="font-semibold">{u.username}</span>
+          <Avatar
+            url={u.avatar_url}
+            username={u.username}
+            size="sm"
+            frame={u.cosmetics.frame}
+          />
+          <span className="font-semibold flex items-center gap-1">
+            {u.username}
+            <VerifiedTick cosmetics={u.cosmetics} className="w-3.5 h-3.5" />
+          </span>
         </Link>
       ))}
     </div>

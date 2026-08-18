@@ -1,26 +1,44 @@
 'use client';
 
 import { useState } from 'react';
-import { Check } from 'lucide-react';
+import { Check, Sparkles } from 'lucide-react';
+import Link from 'next/link';
 import Avatar from './Avatar';
 import { AVATAR_PRESETS } from '@/lib/avatars';
-import { setMyAvatar, updateMyProfile } from '@/lib/user-data';
+import { setMyAvatar, updateMyProfile, setMyCosmetics } from '@/lib/user-data';
+import { ACCENT_PRESETS, FRAME_PRESETS, getAccent, getFrameClass } from '@/lib/cosmetics';
+
+const PATREON_URL = 'https://www.patreon.com/cw/hitboxd';
 
 interface ProfileEditorProps {
   avatarUrl: string | null;
   bio: string | null;
   username: string;
-  onSaved: (changes: { avatarUrl?: string | null; bio?: string | null }) => void;
+  isPremium: boolean;
+  accentColor: string | null;
+  tickColor: string | null;
+  avatarFrame: string | null;
+  onSaved: (changes: {
+    avatarUrl?: string | null;
+    bio?: string | null;
+    accentColor?: string | null;
+    tickColor?: string | null;
+    avatarFrame?: string | null;
+  }) => void;
   onClose: () => void;
 }
 
 const BIO_MAX = 300;
 
-/** Panel for picking an avatar and editing your bio. */
+/** Panel for picking an avatar, editing your bio, and premium cosmetics. */
 export default function ProfileEditor({
   avatarUrl,
   bio,
   username,
+  isPremium,
+  accentColor,
+  tickColor,
+  avatarFrame,
   onSaved,
   onClose,
 }: ProfileEditorProps) {
@@ -30,6 +48,48 @@ export default function ProfileEditor({
   const [savingBio, setSavingBio] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+
+  const [accent, setAccent] = useState(accentColor);
+  const [tick, setTick] = useState(tickColor);
+  const [frame, setFrame] = useState(avatarFrame);
+  const [savingCosmetic, setSavingCosmetic] = useState(false);
+
+  /**
+   * Cosmetics save on click like the avatar picker does, rolling back the
+   * optimistic value if the write fails.
+   */
+  const pickCosmetic = async (
+    field: 'accent_color' | 'tick_color' | 'avatar_frame',
+    value: string | null
+  ) => {
+    if (savingCosmetic) return;
+    const setters = {
+      accent_color: setAccent,
+      tick_color: setTick,
+      avatar_frame: setFrame,
+    } as const;
+    const previous = { accent_color: accent, tick_color: tick, avatar_frame: frame }[field];
+
+    setters[field](value);
+    setError(null);
+    setSaved(false);
+    setSavingCosmetic(true);
+    try {
+      await setMyCosmetics({ [field]: value });
+      onSaved({
+        accentColor: field === 'accent_color' ? value : undefined,
+        tickColor: field === 'tick_color' ? value : undefined,
+        avatarFrame: field === 'avatar_frame' ? value : undefined,
+      });
+      setSaved(true);
+    } catch (err) {
+      setters[field](previous);
+      setError("Couldn't save that. Try again.");
+      console.error('Cosmetic update failed:', err);
+    } finally {
+      setSavingCosmetic(false);
+    }
+  };
 
   const handlePick = async (url: string | null) => {
     if (savingAvatar || url === selected) return;
@@ -109,7 +169,7 @@ export default function ProfileEditor({
                   style={{ imageRendering: 'pixelated' }}
                 />
                 {isSelected && (
-                  <span className="absolute -top-1.5 -right-1.5 bg-primary text-black rounded-full p-0.5">
+                  <span className="absolute -top-1.5 -right-1.5 bg-primary on-primary rounded-full p-0.5">
                     <Check className="w-3 h-3" />
                   </span>
                 )}
@@ -127,6 +187,123 @@ export default function ProfileEditor({
             Remove avatar
           </button>
         )}
+      </div>
+
+      {/* Premium cosmetics. Shown to everyone, locked for non-members —
+          hiding it would hide the reason to subscribe. */}
+      <div className="pt-2 border-t border-dark-border">
+        <div className="flex items-center gap-2 mt-4 mb-1">
+          <Sparkles className="w-4 h-4 text-primary" />
+          <h3 className="font-medium">Premium look</h3>
+        </div>
+        {isPremium ? (
+          <p className="text-sm text-dark-text mb-4">
+            Your colour paints the whole app for you, and your profile for everyone else.
+          </p>
+        ) : (
+          <p className="text-sm text-dark-text mb-4">
+            Pick an app colour, an avatar frame and a badge colour by supporting Hitboxd on{' '}
+            <a
+              href={PATREON_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              Patreon
+            </a>
+            .
+          </p>
+        )}
+
+        <div className={isPremium ? '' : 'opacity-50 pointer-events-none select-none'}>
+          {/* Accent colour */}
+          <p className="text-sm font-medium mb-2">App colour</p>
+          <div className="grid grid-cols-6 sm:grid-cols-12 gap-2 mb-5">
+            {ACCENT_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => pickCosmetic('accent_color', preset.id)}
+                disabled={!isPremium || savingCosmetic}
+                title={preset.label}
+                aria-label={preset.label}
+                aria-pressed={accent === preset.id}
+                className={`relative aspect-square rounded-full border-2 transition-colors ${
+                  accent === preset.id ? 'border-white' : 'border-transparent'
+                }`}
+                style={{ background: `rgb(${preset.rgb})` }}
+              >
+                {accent === preset.id && (
+                  <Check
+                    className="w-3 h-3 absolute inset-0 m-auto"
+                    style={{ color: `rgb(${preset.fg})` }}
+                  />
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Badge colour */}
+          <p className="text-sm font-medium mb-2">Badge colour</p>
+          <div className="grid grid-cols-6 sm:grid-cols-12 gap-2 mb-5">
+            {ACCENT_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => pickCosmetic('tick_color', preset.id)}
+                disabled={!isPremium || savingCosmetic}
+                title={preset.label}
+                aria-label={preset.label}
+                aria-pressed={tick === preset.id}
+                className={`relative aspect-square rounded-full border-2 transition-colors ${
+                  tick === preset.id ? 'border-white' : 'border-transparent'
+                }`}
+                style={{ background: `rgb(${preset.rgb})` }}
+              >
+                {tick === preset.id && (
+                  <Check
+                    className="w-3 h-3 absolute inset-0 m-auto"
+                    style={{ color: `rgb(${preset.fg})` }}
+                  />
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Avatar frame */}
+          <p className="text-sm font-medium mb-2">Avatar frame</p>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => pickCosmetic('avatar_frame', null)}
+              disabled={!isPremium || savingCosmetic}
+              title="No frame"
+              aria-label="No frame"
+              aria-pressed={!frame}
+              className={`rounded-lg p-1 border-2 ${
+                !frame ? 'border-primary' : 'border-transparent'
+              }`}
+            >
+              <Avatar url={selected} username={username} size="sm" />
+            </button>
+            {FRAME_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => pickCosmetic('avatar_frame', preset.id)}
+                disabled={!isPremium || savingCosmetic}
+                title={preset.label}
+                aria-label={preset.label}
+                aria-pressed={frame === preset.id}
+                className={`rounded-lg p-1 border-2 ${
+                  frame === preset.id ? 'border-primary' : 'border-transparent'
+                }`}
+              >
+                <Avatar url={selected} username={username} size="sm" frame={preset.id} />
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Bio */}

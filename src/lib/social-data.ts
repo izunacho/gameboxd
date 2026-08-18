@@ -5,6 +5,7 @@
 
 import { supabase } from './supabase';
 import { requireUser } from './user-data';
+import { USER_COSMETIC_FIELDS, readCosmetics, UserCosmetics } from './cosmetics';
 
 export interface FollowCounts {
   followers: number;
@@ -58,34 +59,40 @@ export interface SocialUser {
   id: string;
   username: string;
   avatar_url: string | null;
+  cosmetics: UserCosmetics;
+}
+
+function toSocialUser(row: any): SocialUser {
+  return {
+    id: row.id,
+    username: row.username,
+    avatar_url: row.avatar_url,
+    cosmetics: readCosmetics(row),
+  };
 }
 
 /** Users who follow `userId`. Blocked relationships are invisible via RLS. */
 export async function getFollowersList(userId: string): Promise<SocialUser[]> {
   const { data, error } = await supabase
     .from('follows')
-    .select('users!follows_follower_id_fkey(id, username, avatar_url)')
+    .select(`users!follows_follower_id_fkey(id, username, avatar_url, ${USER_COSMETIC_FIELDS})`)
     .eq('following_id', userId)
     .order('created_at', { ascending: false });
   if (error) throw error;
 
-  return (data || [])
-    .map((r: any) => r.users)
-    .filter((u: SocialUser | null): u is SocialUser => !!u);
+  return (data || []).map((r: any) => r.users).filter(Boolean).map(toSocialUser);
 }
 
 /** Users that `userId` follows. Blocked relationships are invisible via RLS. */
 export async function getFollowingList(userId: string): Promise<SocialUser[]> {
   const { data, error } = await supabase
     .from('follows')
-    .select('users!follows_following_id_fkey(id, username, avatar_url)')
+    .select(`users!follows_following_id_fkey(id, username, avatar_url, ${USER_COSMETIC_FIELDS})`)
     .eq('follower_id', userId)
     .order('created_at', { ascending: false });
   if (error) throw error;
 
-  return (data || [])
-    .map((r: any) => r.users)
-    .filter((u: SocialUser | null): u is SocialUser => !!u);
+  return (data || []).map((r: any) => r.users).filter(Boolean).map(toSocialUser);
 }
 
 /** Search players by username (case-insensitive substring). Blocked users are excluded via RLS. */
@@ -98,12 +105,12 @@ export async function searchUsers(query: string): Promise<SocialUser[]> {
 
   const { data, error } = await supabase
     .from('users')
-    .select('id, username, avatar_url')
+    .select(`id, username, avatar_url, ${USER_COSMETIC_FIELDS}`)
     .ilike('username', `%${escaped}%`)
     .order('username')
     .limit(10);
   if (error) throw error;
-  return data || [];
+  return (data || []).map(toSocialUser);
 }
 
 export interface BlockStatus {

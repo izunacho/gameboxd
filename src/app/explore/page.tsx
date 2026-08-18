@@ -92,7 +92,7 @@ function ExploreContent() {
               onClick={() => router.push(`/explore?list=${list.key}`)}
               className={`btn text-sm whitespace-nowrap ${
                 activeList === list.key
-                  ? 'bg-primary text-black'
+                  ? 'bg-primary on-primary'
                   : 'bg-dark-surface border border-dark-border text-dark-text hover:bg-dark-border'
               }`}
             >

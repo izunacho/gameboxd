@@ -11,6 +11,7 @@ import {
   AppNotification,
 } from '@/lib/notifications-data';
 import { getPushStatus, enablePush, disablePush, PushStatus } from '@/lib/push';
+import VerifiedTick from './VerifiedTick';
 
 /** Bell icon with unread badge and a dropdown of recent notifications. */
 export default function NotificationBell() {
@@ -94,7 +95,7 @@ export default function NotificationBell() {
       >
         <Bell className="w-5 h-5" />
         {unread > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 bg-primary text-black text-[10px] font-bold rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center">
+          <span className="absolute -top-0.5 -right-0.5 bg-primary on-primary text-[10px] font-bold rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center">
             {unread > 9 ? '9+' : unread}
           </span>
         )}
@@ -166,12 +167,14 @@ export default function NotificationBell() {
               >
                 {n.type === 'new_review' ? (
                   <>
-                    <span className="text-primary">{n.actorUsername}</span> posted a review
+                    <span className="text-primary">{n.actorUsername}</span>
+                    <VerifiedTick cosmetics={n.actorCosmetics} className="w-3.5 h-3.5 ml-0.5" /> posted a review
                     {n.review ? ` for ${n.review.gameName}` : ''}
                   </>
                 ) : (
                   <>
-                    <span className="text-primary">{n.actorUsername}</span> started following you
+                    <span className="text-primary">{n.actorUsername}</span>
+                    <VerifiedTick cosmetics={n.actorCosmetics} className="w-3.5 h-3.5 ml-0.5" /> started following you
                   </>
                 )}
               </Link>

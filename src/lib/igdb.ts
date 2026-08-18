@@ -230,14 +230,3 @@ export function formatReleaseDate(unixTimestamp: number): string {
     return 'N/A';
   }
 }
-
-/**
- * Get rating color based on score
- */
-export function getRatingColor(rating?: number): string {
-  if (!rating) return 'text-gray-400';
-  if (rating >= 80) return 'text-green-500';
-  if (rating >= 70) return 'text-yellow-500';
-  if (rating >= 60) return 'text-orange-500';
-  return 'text-red-500';
-}

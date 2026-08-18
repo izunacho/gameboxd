@@ -8,6 +8,7 @@ import { loadMyLibrary, deleteReview, getMyProfile, MyLibrary, MyProfile } from 
 import { getFollowCounts, FollowCounts } from '@/lib/social-data';
 import GameTile from '@/components/GameTile';
 import Avatar from '@/components/Avatar';
+import RatingBadge from '@/components/RatingBadge';
 import ProfileEditor from '@/components/ProfileEditor';
 import CollapsibleSection from '@/components/CollapsibleSection';
 import { User, CheckCircle2, Bookmark, Heart, Star, Pencil } from 'lucide-react';
@@ -177,9 +178,7 @@ export default function ProfilePage() {
                   >
                     {r.game.name}
                   </Link>
-                  <span className="bg-primary text-black font-bold px-2 py-0.5 rounded text-sm shrink-0">
-                    {r.rating}/100
-                  </span>
+                  <RatingBadge rating={r.rating} className="shrink-0" />
                 </div>
                 {r.content && <p className="text-dark-text text-sm line-clamp-3">{r.content}</p>}
                 <div className="flex items-center gap-3 mt-2">

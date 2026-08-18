@@ -6,10 +6,12 @@ import { getGameDetails, getErrorMessage } from '@/lib/api-client';
 import { IGDBGame, getIGDBImageUrl, formatReleaseDate } from '@/lib/igdb';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Heart, Bookmark, CheckCircle2, Star, User } from 'lucide-react';
+import { Heart, Bookmark, CheckCircle2, Minus, Plus, User } from 'lucide-react';
 import { useAppStore, InteractionType } from '@/lib/store';
 import ReviewLikeButton from '@/components/ReviewLikeButton';
+import RatingBadge from '@/components/RatingBadge';
 import { supabase } from '@/lib/supabase';
+import { ratingColor, ratingTextColor, normalizeRating, RATING_NEUTRAL } from '@/lib/rating';
 import {
   submitReview,
   deleteReview,
@@ -29,7 +31,8 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [rating, setRating] = useState(0);
+  // null means "not rated yet" — 0 is a real score, so it can't stand in for unset.
+  const [rating, setRating] = useState<number | null>(null);
   const [review, setReview] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -98,11 +101,19 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
     loadReviews();
   }, [gameId]);
 
+  // Nudge by one, starting from the middle if nothing is set yet.
+  const adjustRating = (delta: number) =>
+    setRating(normalizeRating((rating ?? 50) + delta));
+
+  const commitIfUnset = (e: React.SyntheticEvent<HTMLInputElement>) => {
+    if (rating === null) setRating(Number(e.currentTarget.value));
+  };
+
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!game) return;
-    if (rating === 0) {
-      setFormError('Please select a rating');
+    if (rating === null) {
+      setFormError('Please choose a rating first');
       return;
     }
 
@@ -113,7 +124,7 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
       await submitReview(game, rating, review);
       setFormSuccess(true);
       setReview('');
-      setRating(0);
+      setRating(null);
       setPrefilled(true); // don't re-prefill from the refreshed list below
       // Refresh the community reviews so the new one appears immediately
       setReviews(await getGameReviews(game.id));
@@ -134,7 +145,7 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
     if (!confirm('Delete your review? This cannot be undone.')) return;
     try {
       await deleteReview(myReview.id);
-      setRating(0);
+      setRating(null);
       setReview('');
       setFormSuccess(false);
       setReviews(await getGameReviews(game.id));
@@ -297,26 +308,70 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
           {myReview ? 'Edit Your Review' : 'Rate & Review'}
         </h2>
         <form onSubmit={handleSubmitReview} className="space-y-4">
-          {/* Star Rating */}
+          {/* Rating */}
           <div>
-            <label className="block text-sm font-medium mb-3">Your Rating</label>
-            <div className="flex gap-2">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  type="button"
-                  onClick={() => setRating(star * 20)}
-                  className="text-2xl transition hover:scale-110"
+            <label htmlFor="rating-slider" className="block text-sm font-medium mb-3">
+              Your Rating
+            </label>
+
+            <div className="flex items-center justify-between gap-4 mb-3">
+              <p className="flex items-baseline">
+                <span
+                  className="text-4xl font-bold tabular-nums transition-none"
+                  style={{ color: rating === null ? '#4B4B4B' : ratingTextColor(rating) }}
                 >
-                  <Star
-                    className="w-8 h-8 transition-all"
-                    fill={star * 20 <= rating ? '#00D084' : 'none'}
-                    color={star * 20 <= rating ? '#00D084' : '#2D2D2D'}
-                  />
+                  {rating ?? '—'}
+                </span>
+                <span className="text-base text-dark-text ml-1">/100</span>
+              </p>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => adjustRating(-1)}
+                  disabled={rating === 0}
+                  aria-label="Decrease rating by one"
+                  className="btn-secondary w-11 h-11 flex items-center justify-center p-0 disabled:opacity-40"
+                >
+                  <Minus className="w-4 h-4" />
                 </button>
-              ))}
+                <button
+                  type="button"
+                  onClick={() => adjustRating(1)}
+                  disabled={rating === 100}
+                  aria-label="Increase rating by one"
+                  className="btn-secondary w-11 h-11 flex items-center justify-center p-0 disabled:opacity-40"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-            {rating > 0 && <p className="text-sm text-primary mt-2">Rating: {rating}/100</p>}
+
+            <input
+              id="rating-slider"
+              type="range"
+              min={0}
+              max={100}
+              step={1}
+              value={rating ?? 50}
+              onChange={(e) => setRating(Number(e.target.value))}
+              // A tap that lands exactly on the starting position fires no
+              // change event, so commit the value on release too.
+              onPointerUp={commitIfUnset}
+              onKeyUp={commitIfUnset}
+              aria-valuetext={rating === null ? 'No rating selected' : `${rating} out of 100`}
+              className="rating-slider"
+              style={
+                {
+                  '--v': rating ?? 0,
+                  '--fill-color': rating === null ? RATING_NEUTRAL : ratingColor(rating),
+                } as React.CSSProperties
+              }
+            />
+
+            <p className="text-xs text-dark-text mt-2">
+              Drag the bar or use the arrow keys. 0 is a valid score.
+            </p>
           </div>
 
           {/* Review Text */}
@@ -351,7 +406,7 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
           <div className="flex gap-2">
             <button
               type="submit"
-              disabled={submitting || rating === 0}
+              disabled={submitting || rating === null}
               className="btn-primary flex-1 disabled:opacity-50"
             >
               {submitting ? 'Submitting...' : myReview ? 'Update Review' : 'Submit Review'}
@@ -395,9 +450,7 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
                     <User className="w-4 h-4" />
                     {r.username}
                   </Link>
-                  <span className="bg-primary text-black font-bold px-2 py-0.5 rounded text-sm">
-                    {r.rating}/100
-                  </span>
+                  <RatingBadge rating={r.rating} />
                 </div>
                 {r.content && <p className="text-dark-text leading-relaxed">{r.content}</p>}
                 <div className="flex items-center justify-between mt-3">
